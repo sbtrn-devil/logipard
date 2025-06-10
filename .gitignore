@@ -1,3 +1,6 @@
+# project specific
+*.gen/
+
 # Logs
 logs
 *.log
