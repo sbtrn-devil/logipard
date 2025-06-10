@@ -1,0 +1,479 @@
+#LP-include lp-module-inc.lp-txt
+#LP M/model { <#./%title: Freeform Documentation Object Model#>
+#LP-alias Md: model
+#-LP (LP comment to delimit alias in plain text file)
+
+#LP: The central idea of Logipard is storage of the extracted documentation fragments in a single intermediate machine-readable database,
+which is then accessible to documentation generators, as well as for other uses, in a certain uniform manner.
+
+Logipard does not enforce any particular back-end implementation or storage strategy (although some built-in is provided
+for quickstart and as an example) - much like everything else, it is subject for customization. What we define is
+the high-level data structure, its population logic and access methods that must be supported by the database implementation
+to fit into the intended Logipard pipeline. These definitions constitute the Freeform Documentation Object Model (FDOM).
+
+#LP ./dataStruct { <#./%title: FDOM data structure#> <#./%order: 1#>
+The FDOM data structure explanation starts best with a visual example...
+
+<#img ./lp-model.png #>
+
+The model data consists of *nodes*. Each one can be considered as documentation container for a single entity within your domain.
+It is up to the project convention to agree what an 'entity' is. It can for example be:
+- a program class,
+- a class member,
+- a class method,
+- a chapter, or other named section,
+- a glossary item,
+- ...etc.
+
+Basically everything that makes any sense as a standalone titled text fragment. Another option is to use nodes as extra (meta)data fields / markers / etc.
+to other nodes. Any domain specific semantics can be implemented on top of **node relations** provided by FDOM (see: <#ref dataStruct/parent-member#>,
+<#ref dataStruct/tagged-tag#> ).
+
+In the example shown above, we have total of 11 nodes.
+
+#LP ./content { <#./%title: Content#> <#./%order: 1.1#>
+Each node has *content* associated with it - the actual text or whatever other documentation/data pieces. From FDOM perspective, the content is opaque
+(although its source is naturally text-based) and it is intentionally not involved into FDOM basic querying comprehension (see <#ref Md/querying#>). The content comprehension
+(whether it is a plain text, or markdown text, or a resource link, or metadata that needs special interpretation, or etc.), as well as possibly
+extending of the querying to involve usage of the content, is up to particular FDOM writing and reading users.
+
+#LP } content
+
+#LP ./parent-member { <#./%title: Parent-member relation and names#> <#./%order: 1.2#>
+
+The nodes can have *parent-member* relation. Each node can have arbitrary number (including none) of member nodes, and is itself a member
+to exactly one parent node (except for the root node). No cycles are allowed, and exactly one root node exists in the model, so the model
+parent-member skeleton is a single component tree structure. Parent-member structure is also a basis for nodes naming space.
+
+Every node has a **short name**, a sequence of characters that should be unique within sibling nodes (under same immediate parent),
+but doesn't have to be unique globally. (See <#ref ./nodeNaming #> on what sequences are the correct short names.)
+A node can therefore be uniquely identified by a **full name** - the short names of nodes that make up path to it from the root, joined with forward
+slashes (`/`-s). Thus, the node on our example picture shortnamed `subNodeA-3-1` has full name of `nodeA/subNodeA-3/subNodeA-3-1`, as well as the
+node shortanmed `%tag3` has full name of `moreTags/%tag3`.
+
+Therefore, node's full name can be considered as a directory path under the root node (and so can also be referred to as **path name** or **full path name**).
+The root node itself is unnamed, and is intentionally assumed to have no valid short or full name.
+
+#LP ./nodeNaming { <#./%title: Node short names#> <#./%order: 1.2.1#>
+A valid node short name is any non-empty, non-whitespace sequence of characters with exception of `/`-s, with one extra option: a sequence between
+single or double quotes is considered a single character, and can contain the characters normally disallowed. For example, `spare/can` is not a valid short name
+(although is a valid full name), and `space time` is not a valid name at all, but `"spare/can"` and `'space time'` are both valid short names. Or,
+for another example, `A/"B/C"/D` is a three segment full name made of short names `A`, `"B/C"`, `D`. Quotes must match, except for when inside other type of quotes.
+
+Note that quotes are considered parts of names, and there are no escapes or whitespace compactions inside (that is, `"shortName"` is not the same as
+`shortName` and not the same as `"shortName "`).
+
+Additionally, some short names are considered reserved and should be used with caveat considerations:
+- short names starting with `#` (e. g. `#include`, `##mp`). That includes single `#`. These are reserved as private generated names. They can actually
+appear in the compiled model, but never as explicitly user specified short names.
+- short names containing `:`, `{`, `}` (e. g. `a::b`, `{ARG}`). `:`, `{` and `}` are reserved as delimiters for input syntax.
+- short names consisting only of dots (`.`, `..`, `...`, etc.). These are reserved for referring to current/previous/pre-previous/etc. path levels
+and can not be actual node names.
+- short name `~` (single tilde) - every occurrence of this short name resolves to a unique private generated short name and can not be
+an actual node name.
+
+You can use single or double quotes to sort of work around this restriction (`"#name"`, `"."`, `"~"`, `'{ARG}'`, `'a::b'` are valid short names).
+
+Some short names can be well-known in your domain's model and have meaning of a particular metadata attribute for the parent node. For example, node named `%title` can designate
+the parent's node title. Such shortnames are recommended to start with `'%'` character to emphasize their special role and simplify filtering them out of "usual" sub-nodes.
+#LP } nodeNaming
+#LP } parent-member
+
+#LP ./tagged-tag { <#./%title: Tagged-tag relation#> <#./%order: 1.3#>
+Additionally, nodes can have **tagged-tag** relation, that has no restrictions on directions and nodes allowed to link. (We will also use words **model tags** as a synonym, in contexts that
+require distinction from text markup tags.) In programming-like terms, this relation can be thought of as "weak" links, in contrast to "strong" links that form parent-member-ship and namespacing structure.
+In further description of the model, the fact a node is tagged with some tags can be denoted with separating each tag via hash: `node #tag1 #tag2 ...`
+
+The primary use case of tagging is to mark a node with set of flags of your domain to let the FDOM users know that the documented object is (or is not) of some particular domain-specific type -
+e. g., a function, a structure, a query, etc. For every such flag, you introduce a specific tag (e. g. `%function`, `%arg`, etc.), each of which is also a FDOM node. Apart from
+reducing number of basic entities in the model, this approach allows the tag itself to be tagged and to have metadata sub-nodes, which enables creation of quite complex comprehensions.
+
+Another use case is to make metadata attributes that hold a list of other nodes. You can create a node with a well-known short name tagged with all the nodes that are to be included into the list.
+For example, in node describing a class that extends some base classes/interfaces, a sub-node named `%extends` can be tagged with all of the nodes describing the base classes.
+
+#LP } tagged-tag
+
+#LP ./null-nodes { <#./%title: Null/non-existent nodes#> <#./%order: 1.4#>
+
+Non-existing nodes are considered mutually equivalent to **null nodes** - ones that have no non-blank content, are not tagged to any other node, have no tags, and no non-null member nodes. They are typically
+optimized out of actual storage.
+
+#LP } null-nodes
+
+#LP ./sources-construction { <#./%title: Sources and construction principles#> <#./%order: 1.4#>
+
+Every piece of content, and every assigned tag, is associated with some **source** it comes from (i. e. a source code file), and only exists in the model by virtue of its presence in the source.
+The only legit method of creation of and updates to the FDOM is by re-extracting and re-compiling the source and replacement of any data associated with the source with the up-to-date one.
+
+As a result of the update, a node can become a null-node - this is an ok situation.
+
+The FDOM structure is designed in such a way that the order of processing each individual source has no query-relevant impact. No matter if you are constructing the FDOM from scratch with a certain set
+of sources, or from a part of this set and update the rest incrementally, possibly repeating as the source changes, you should end up with the same model (with a possible error of content/nodes list ordering,
+these are not query-relevant).
+
+#LP } sources-construction
+
+#LP } dataStruct
+
+#LP ./querying { <#./%title: FDOM querying#> <#./%order: 2#>
+FDOM includes the concept of **query** - a specification that defines a read-only view of the stored data and outlines the interface through which the data should be accessed.
+The specific API form and underlying implementation of the query interface are left to individual implementations and are considered out of scope.
+
+In essence, an FDOM query is a pipeline that takes a collection of nodes as input and produces another collection of nodes based on specific criteria. This pipeline can consist of either basic queries
+or a composite chain of sub-queries (query fragments). Queries can be executed all at once or applied incrementally, with intermediate states stored in the **query context**.
+
+#LP ./collections { <#./%title: Collections#> <#./%order: 2.1#>
+The core element of the FDOM data view is **collection** - a set of distinct nodes that contains no duplicates and no null nodes. This set can be empty, and it is inherently unordered. A collection can be
+explicitly specified by the user, or be obtained as result of a query.
+
+Having a collection assumes that the user can access each individual node in it, at least by means of enumeration. Access to a node assumes ability to get all of its elements:
+- content (in implementation-specific way, so exact details of content access are opaque to FDOM query concept),
+- the set of member nodes (as FDOM collection),
+- the set of member node short names, and each individual member by its short name,
+- the set of tag nodes (as FDOM collection).
+
+While it is recommended for API implementations to retain the original order of items from the same source during collection enumeration wherever possible, this behavior should not be relied upon. Generally,
+the order of items only becomes relevant at the final step, once all required collections have been obtained and the query scope has concluded. For this reason, the FDOM query concept intentionally omits any
+notion of sorting, delegating that responsibility to other layers of the API.
+
+#LP } collections
+
+#LP ./query-context { <#./%title: Query context#> <#./%order: 2.2#>
+The **query context** represents the state of the query pipeline after each query fragment (or, at the start of the query, the initial state). It is associated with the **current collection**, which is
+the result of the last executed query fragment (or, in the initial state, the input collection provided by the user).
+
+To simplify implementation optimizations, the FDOM query concept suggests that the current collection is only exposed to the user after **context teardown** - an explicit indication by the user that the query
+is complete and access to the final result is required. The query result is the current collection from its context at time of teardown.
+
+#LP } query-context
+
+#LP ./basic-queries { <#./%title: Basic queries#> <#./%order: 2.3#>
+There is a number of basic queries that can comprise a more complex query. FDOM does not suggest a particular syntax for the query DSL, so we'll express it in somewhat conventional notation - the way the items
+are actually specified on site depends on the particular API and implementation. A complex query is basically a list of basic queries, where each starts with output of the previous one as its input, the first
+one acts on initial current collection of the context, and the last one sets the new current collection. Our conventional notation for such query lists will be `<query1> / <query2> / ... / <queryN>`.
+
+Some query related things to remind and to keep in mind:
+- collections (including query results) contain no null nodes and no duplicate nodes
+- collections are unordered, order of their elements on enumeration is implementation dependent. Although it is recommended for the implementation to keep enumeration order in explicitly specified collections
+(see <#ref ./collection-spec#>) and declaration order of elements that come from the same source, it is on-opportunity advice, not a requirement, and is not always possible to satisfy. Precise ordering is
+a concern out of FDOM scope.
+
+#LP ./collection-spec { <#./%title: Collection specification#> <#./%order: 2.3.1#>
+Not a query per se, but there are cases when you need to specify a collection in ad hoc manner (an initial one that a query starts on, or an auxiliary collection in addition to the current one). FDOM allows for the following ways
+to specify a collection:
+
+- direct list of nodes, generally by their full names: `[node-fn-1, node-fn-2, ...]` As the collection may be empty, but may not contain null nodes, any null nodes possibly referred in this list are
+effectively dropped from the specified collection (they won't be enumerated or considered in any way, and won't count towards size of the collection).
+- mixed list of nodes and collection specs, e. g.: `[node-fn-1, node-fn-2, <coll-spec-1>, node-fn-3...]` The extended version of list of nodes, the collection spec elements are treated as list of nodes
+obtained by expanding the corresponding collection; duplicate nodes are ignored (a node is only included in the collection once).
+- collections union: `<coll-spec-1> + <coll-spec-2> + ...` The collection that includes every node from every given collection.
+- collections intersection: `<coll-spec-1> & <coll-spec-2> & ...` The collection that only includes nodes that are found in all of the given collections.
+- collections subtraction: `<coll-spec-1> - <coll-spec-2> - ...` The collection that only includes nodes that are found in first collection of the list, but not in any of 2nd and the rest collections of the list.
+- reference by alias: `SomeCollAlias` An alias is a "bookmark" for a collection within the query context to be able to recall it and refer to it later. An alias is conventionally denoted by a valid FDOM
+short name.
+- API-specific representation: whatever way API enables the user to represent a complete collection object, whether the collection is directly user-specified, or is obtained via query, or via any other way.
+
+The specification may be composite, e. g. `BasicNodes + [advanced/%node1, advanced/%node3, MoreAdvancedNodes] + ((EvenMoreNodesA & EvenMoreNodesB) - [%node4])`.
+
+Note on aliases: they can be valid per-query or can be permament (shared between multiple independent queries). In any case, an alias is assumed unique per its scope, and not re-assigned to a different
+collection once set (behaviour in case of replacement of an alias is implementation-dependent). Name crossing for permament and per-query aliases is also discouraged.
+
+#LP } collection-spec
+
+#LP ./conditions { <#./%title: Condition specification#> <#./%order: 2.3.2#>
+Some queries need to specify a **condition** to check on a node potentially included into the result. FDOM allows for the following conditions:
+
+- Boolean constant: `true` if the condition always holds, `false` if the condition always fails.
+- `isAnyOf <collection-spec>`: the condition holds if the node is one of the given collection.
+- `hasMembersThat <sub-condition>`: the condition holds if the sub-condition holds for at least one of the node's non-null members.
+- `hasMembersNamed <regular expression>`: the condition holds if the node has at least one non-null member with shortname that matches the given regular expression. Shortcut for
+`hasMembersThat (named <regular expression>)` (see below) that can have potentially optimized implementation.
+- `hasAnyOfTags <collection-spec>`: the condition holds if the node has at least one tag from the given collection of tag nodes.
+- `hasAllOfTags <collection-spec>`: the condition holds if the node has all tags from the given collection of tag nodes.
+- `hasParentThat <sub-condition>`: the condition holds if the sub-condition holds for the node's immediate parent.
+- `named <regular expression>`: the condition holds if the node's shortname matches the given regular expression.
+- `and <list of sub-conditions>`: the condition holds if all of the sub-conditions in the given list hold.
+- `or <list of sub-conditions>`: the condition holds if at least one of the sub-conditions in the given list holds.
+- `not <sub-condition>`: the condition holds if the sub-condition fails, and fails if the sub-condition holds.
+- reference by alias `SomeConditionAlias`: a condition can be marked by a shortcut alias (conventionally denoted by a valid FDOM short name) that can be re-used across the query or other queries in this
+context.
+
+Note there are no conditions that operate on content. FDOM queries are purely structural.
+
+#LP } conditions
+
+#LP ./alias { <#./%title: Set local collection alias ["alias ..."] #> <#./%order: 2.3.3#>
+`alias ShortName` - set an local alias to current collection (it only is in effect until the current query teardown). Does not change the current collection, just sets an alias to it that can be used in
+later parts of the query.
+
+All the alias shortnames, both local and permament, are assumed unique per context. Re-use of an ID is discouraged (local ID can be re-used only in next query), and the behaviour in this case is implementation
+specific.
+
+#LP } alias
+
+#LP ./with { <#./%title: Replace current collection ["with ..."] #> <#./%order: 2.3.4#>
+`with <collection-spec>` - replace the current collection with an explicitly specified one (see <#ref ../collection-spec#>). Useful for sub-queries that are based on some well-known sets of nodes.
+
+#LP }
+
+#LP ./membersThat { <#./%title: Select members that satisfy condition ["membersThat ..."] #> <#./%order: 2.3.5#>
+`membersThat <condition-spec> [on <collection-spec>] [recursive]` - take member nodes from each element of the current collection, such that each member satisfies the given condition (<#ref ../conditions#>),
+and replace the current collection with set of such nodes. An explicitly specified collection can optionally be searched in instead of the current one. This query can be recursive (<#ref ../recursive#>).
+
+For example, we have node and its members:
+- `node`
+- `node/memberA`
+- `node/memberB`
+- `node/memberC`
+
+The query starts with collection:
+- `node`
+
+Then query `membersThat (not (named /^.*A/))` will yield the following collection:
+- `node/memberB`
+- `node/memberC`
+
+#LP }
+
+#LP ./itemsThat { <#./%title: Select elements of the collection that satisfy condition ["itemsThat ..."] #> <#./%order: 2.3.6#>
+`itemsThat <condition-spec> [on <collection-spec>] [recursive]` - filter the elements from the current collection that satisfy the given condition (<#ref ../conditions#>), and replace the current collection
+with set of these nodes. An explicitly specified collection can optionally be searched in instead of the current one. This query can be recursive (<#ref ../recursive#>).
+
+For example, the query starts on a collection of nodes:
+- `node1/memberA`
+- `node2/memberB`
+- `node3/memberC`
+
+Then query `itemsThat (not (named /^.*A/))` will yield the following collection:
+- `node2/memberB`
+- `node3/memberC`
+
+#LP }
+
+#LP ./tagsThat { <#./%title: Select tags of the collection's elements that satisfy condition ["tagsThat ..."] #> <#./%order: 2.3.7#>
+`tagsThat <condition-spec> [on <collection-spec>] [recursive]` - get tag nodes of each element of the collection, such that each tag satisfies the given condition (<#ref ../conditions#>), and replace the current
+collection with set of these nodes. An explicitly specified collection can optionally be searched in instead of the current one. This query can be recursive (<#ref ../recursive#>).
+Although this query can be used on any collection, its typical use is on single elements (single element collection).
+
+#LP }
+
+#LP ./inMembersThat { <#./%title: Perform sub-query on members of the collection's elements that satisfy condition ["inMembersThat ..."] #> <#./%order: 2.3.8#>
+`inMembersThat <condition-spec> [on <collection-spec>] [recursive] query <basic-query-list>` - take member nodes from each element of the current collection, such that each member satisfies the given condition
+(<#ref ../conditions#>), then replace the current collection with the result of the given query list on collection of these (member) nodes. An explicitly specified collection of initial nodes can optionally be
+set to start the sub-query on instead of the current one. This query can be recursive (<#ref ../recursive#>).
+
+For example, we have node, its members, and its sub-members:
+- `node`
+- `node/memberA`
+- `node/memberB`
+- `node/memberB/%data`
+- `node/memberC`
+- `node/other/%data`
+
+The query starts with collection:
+- `node`
+
+Then query `inMembersThat (named /%^member/) query (hasMembersNamed /^%data$/)` delivers the following collection:
+- `node/memberB/%data`
+
+(The `node/other` has member `%data`, but does not pass the `inMembersThat` condition, so doesn't get into the collection of subjects for sub-query search.)
+
+Sub-queries use same local collection aliases namespace as the main query.
+
+#LP }
+
+#LP ./inTagsThat { <#./%title: Perform sub-query on tags of the collection's elements that satisfy condition ["inTagsThat ..."] #> <#./%order: 2.3.9#>
+`inTagsThat <condition-spec> [on <collection-spec>] [recursive] query <basic-query-list>` - take tag nodes from each element of the current collection, such that each tag satisfies the given condition
+(<#ref ../conditions#>), then replace the current collection with the result of the given query list on collection of these (tag) nodes. An explicitly specified collection of initial nodes can optionally be
+set to start the sub-query on instead of the current one. This query can be recursive (<#ref ../recursive#>).
+
+For example, we have the following tag nodes and their members:
+- `%tag1`
+- `%tag2`
+- `%tag2/%isLangObject`
+- `%tag2/%subInfo`
+- `%tag3`
+- `%tag3/%subInfo`
+
+and the following set of nodes tagged as follows:
+- `node1 #%tag1`
+- `node2 #%tag1 #%tag2`
+- `node3 #%tag3 #%tag2`
+- `node4 #%tag4`
+
+The query is `inTagsThat (hasMembersNamed /^%isLangObject$/) query membersThat (named /^%subInfo$/)`.
+
+Done on either of the following collections:
+- `node1`
+- `node2`
+
+- `node3`
+
+it delivers the collection:
+- `%tag2/%subInfo`
+
+Done on collection:
+- `node1`
+- `node4`
+
+it yields empty collection.
+
+Sub-queries use same local collection aliases namespace as the main query.
+
+#LP }
+
+#LP ./inItemsThat { <#./%title: Perform sub-query on the collection's elements that satisfy condition ["inItemsThat ..."] #> <#./%order: 2.3.10#>
+`inItemsThat <condition-spec> [on <collection-spec>] [recursive] query <basic-query-list>` - take each element of the current collection that satisfies the given condition (<#ref ../conditions#>), then replace
+the current collection with the result of the given query list on collection of these (collection entry) nodes. An explicitly specified collection of initial nodes can optionally be set to start the sub-query on
+instead of the current one. This query can be recursive (<#ref ../recursive#>).
+
+For example, we have the following nodes and their members:
+- `node1`
+- `node1/member1`
+- `node1/member2`
+- `node1/member2/%flagged`
+- `node2`
+- `node2/member2`
+- `node2/member2/%flagged`
+- `node3/member1`
+- `node3/member1/%flagged`
+
+The query is `inItemsThat (hasMembersNamed /^member1$/) query membersThat (haveMembersNamed /^%flagged$/)`. Done on the collection:
+- `node1`
+- `node2`
+- `node3`
+
+it yields the collection:
+- `node1/member2`
+- `node3/member1`
+
+Sub-queries use same local collection aliases namespace as the main query.
+
+#LP }
+
+#LP ./subtractQuery { <#./%title: Subtract result of sub-query from current collection ["subtractQuery ..."] #> <#./%order: 2.3.11#>
+`subtractQuery [on <collection-spec>] <basic-query-list>` - perform the given query list and subtract the result from the current collection. The collection the sub-query is performed is by default the
+`subtractQuery`'s initial collection itself, but an explicitly specified collection can be optionally given instead.
+
+For example, we have the following nodes and their members:
+- `node1`
+- `node2`
+- `node2/%flag`
+- `node3`
+
+The query is `subtractQuery itemsThat (haveMembersNamed /^%flag$/)`. Done on the collection:
+- `node1`
+- `node2`
+- `node3`
+
+it yields the collection:
+- `node1`
+- `node3`
+
+Sub-queries use same local collection aliases namespace as the main query.
+
+#LP }
+
+#LP ./unionQuery { <#./%title: Union result of sub-query with current collection ["unionQuery ..."] #> <#./%order: 2.3.12#>
+`unionQuery [on <collection-spec>] <basic-query-list>` - perform the given query list and union the result with the current collection. The collection the sub-query is performed is by default the
+`unionQuery`'s initial collection itself, but an explicitly specified collection can be optionally given instead.
+
+For example, we have the following nodes and their members:
+- `node1`
+- `node2`
+- `node2/member`
+- `node3`
+
+The query is `unionQuery membersThat (true)`. Done on the collection:
+- `node1`
+- `node2`
+- `node3`
+
+it yields the collection:
+- `node1`
+- `node2`
+- `node2/member`
+- `node3`
+
+Sub-queries use same local collection aliases namespace as the main query.
+
+#LP }
+
+#LP ./intersectQuery { <#./%title: Intersect result of sub-query with current collection ["intersectQuery ..."] #> <#./%order: 2.3.13#>
+`intersectQuery [on <collection-spec>] <basic-query-list>` - perform the given query list and intersect the result with the current collection. The collection the sub-query is performed is by default the
+`intersectQuery`'s initial collection itself, but an explicitly specified collection can be optionally given instead.
+
+For example, we have the following nodes and their members:
+- `node1`
+- `node2`
+- `node2/%flag`
+- `node3`
+
+The query is `intersectQuery itemsThat (haveMembersNamed /^%flag$/)`. Done on the collection:
+- `node1`
+- `node2`
+- `node3`
+
+it yields the collection:
+- `node2`
+
+Sub-queries use same local collection aliases namespace as the main query.
+
+#LP }
+
+#LP ./sideQuery { <#./%title: Perform sub-query with no effect on current collection ["sideQuery ..."] #> <#./%order: 2.3.14#>
+`sideQuery [on <collection-spec>] <basic-query-list>` - perform the given query list, but leave the current collection unchanged. This query only makes sense if the query ends in setting a local alias.
+The collection the sub-query is performed is by default the `sideQuery`'s initial collection itself, but an explicitly specified collection can be optionally given instead.
+
+Intended use case for this query is to set an alias in an inline way without breaking flow of the "primary" query. For example, we have node tagged:
+- `tagsList #tag1 #tag2`
+
+and are given the collection of nodes tagged as:
+- `node1 #tag1`
+- `node2 #tag2`
+- `node3 #tag3`
+
+Then the query "filter nodes tagged by some of tags from `tagsList`" will be: `(sideQuery on [tagsList] allTagsThat (true) / alias TAGS) / allItemsThat (hasAnyOfTags TAGS)`.
+
+Applied to collection:
+- `node1`
+- `node2`
+- `node3`
+
+it will yield the collection:
+- `node1`
+- `node2`
+
+Sub-queries use same local collection aliases namespace as the main query.
+
+#LP }
+
+#LP ./recursive <#./%title: Recursive queries#> <#./%order: 2.3.15#>
+Some queries can optionally be **recursive**. That means, after replacing current collection with the matching set of nodes, the same query is applied to the resulting collection, and the outcome is
+added to the result (as per union operation), then the same is done to the new nodes, and so on, until the resulting collection no longer changes. This is useful for queries that pull nodes out by some
+transitive relations.
+
+For example, let us have nodes and their members tagged as follows:
+- `classA`
+- `classB`
+- `classB/%extends #classA`
+- `classC`
+- `classD`
+- `classD/%extends #classB #classC`
+
+Given starting collection of some single 'class' node, e. g.:
+- `classD`
+
+we could use the following query to fetch the collection of nodes for classes it extends: `inMembersThat (named /^%extends$/) allTagsThat (true)`, but this query will only return nodes for the "directly"
+extended classes:
+- `classB`
+- `classC`
+
+In order to pull the whole tree of extended classes in-depth, we need the recursive version of the query: `inMembersThat (named /^%extends$/) recursive allTagsThat (true)`. Then we will get the expected:
+- `classA` (recursively queried via `classB`)
+- `classB`
+- `classC`
+
+#LP } basic-queries
+
+#LP } querying

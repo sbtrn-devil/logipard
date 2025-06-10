@@ -1,0 +1,254 @@
+#LP-include lp-module-inc.lp-txt
+#LP M/lpgread-interface {
+<#./%title: Suggested compiled FDOM reader interface#>
+The interface that readers of FDOM models generated at Logipard compilation stage are recommended to implement.
+In particular, it is implemented by <#ref M/interfaces/lpgread-basic-json#>.
+
+#LP-alias I: lpgread-interface
+#-LP (LP comment to delimit alias in plain text file)
+
+#LP ./Item %type {
+<#./%title %noloc: \<Item>#>
+The type that incapsulates a FDOM item node in this reader's engine. May be a "null item" (don't mistake for `null` value).
+If the item is a reader resource that needs to be explicitly disposed, the implementation documentation must emphasize that, stipulate the object lifetime, and provide a disposal method.
+
+Null item refers to an item with incorrect path or empty one. These are considered equivalent: if a name refers to item
+that is not explicitly present in the model, it is assumed to be an empty item, and, conversely, an empty item is considered
+a no-item when bundling into a collection (that is, not added even if explicitly declared to include).
+
+#LP ./name %member { <#./%title %noloc: .name#>
+Read-only property, string. The item's full path name (with no namespace aliases)
+#LP }
+
+#LP ./shortName %member { <#./%title %noloc: .shortName#>
+Read-only property, string. The item's short name (last segment of the full path name).
+#LP }
+
+#LP ./content %member { <#./%title %noloc: .content#>
+Read-only property. The item content (text, inline references, and whatever else the reader's backing model supports).
+#LP ./%return: Array of items, each of which is either of:
+- string, for a text content
+- an object `{ ref: <Item>, text: string }` (ref is <#ref I/Item#>), for an inline ref to another item. Text is the ref alt display text, if not empty then it is suggested instead of the ref-d item's
+default title.
+- optionally, any other content fragment type specific to this FDOM reader and its backing model
+#LP }
+
+#LP ./tags %member { <#./%title %noloc: .tags#>
+Read-only property. Collection of the item's tags.
+#LP ./%return: <#ref I/Collection#>, collection of the node tags.
+#LP }
+
+#LP ./members %member { <#./%title %noloc: .members#>
+Read-only property. Collection of the item's members.
+#LP ./%return: <#ref I/Collection#>, collection of the node members.
+#LP }
+
+#LP ./isNull %member { <#./%title %noloc: .isNull#>
+Read-only property, bool. Check if item is empty (true) or not (false).
+#LP }
+
+#LP ./parent %member { <#./%title %noloc: .parent#>
+Read-only property, <#ref I/Item#>. Return parent item (one this item is member to). For root item returns null (not null item).
+#LP }
+
+#LP ./isConditionTrue %member %method { <#./%title %noloc: .isConditionTrue(lpqCtx, condSpec)#>
+Check if the item satisfies a certain condition, must be done relative to a query context (in order to resolve condition and collection aliases).
+#LP ./lpqCtx %arg: <#ref I/Context#>, a query context.
+#LP ./condSpec %arg: <#ref I/Condition#>, the condition.
+#LP ./%return: true if the item satisfies the condition, false otherwise.
+#LP }
+
+#LP } Item
+
+#LP ./Collection %type {
+<#./%title %noloc: \<Collection>#>
+The type that incapsulates a complete and readable collection of <#ref I/Item#>-s. It should be a JS iterable. Collection must never contain null (with <#ref I/Item/isNull#> = true) or duplicate items.
+If it is a reader resource that needs to be explicitly disposed, the implementation documentation must emphasize that, stipulate the object lifetime, and provide a disposal method.
+
+#LP ./size %member { <#./%title %noloc: .size#>
+Read-only property, number. Size of the collection (how many items are in it).
+#LP }
+
+#LP ./contains %member %method { <#./%title %noloc: .contains(item)#>
+Check if the collection contains the given item. Must be false for any null (with <#ref I/Item/isNull#> = true) items.
+#LP ./item %arg: <#ref I/Item#>, item to check for presence in the collection.
+#LP ./%return: true if the item is contained in the collection, false otherwise
+#LP }
+
+#LP ./iterator %member { <#./%title %noloc: [Symbol.iterator]#>
+The collection must be a JS-enumerable object, delivering the contained <#ref I/Item#>'s in some order (`for (var item of collection)`).
+It is recommended for the implementation to keep items declared within the same source in the same order as they are in that source, but the user is not recommended to rely on this assumption.
+#LP }
+
+#LP } Collection
+
+#LP ./Query { <#./%title %noloc: \<Query>#>
+An object containing a pre-compiled query that can be stored in a variable or other value slot. No useful properties or methods to expose per se, intended for use in contexts where user needs to supply a query.
+If it is a reader resource that needs to be explicitly disposed, the implementation documentation must emphasize that, stipulate the object lifetime, and provide a disposal method.
+#LP } Query
+
+#LP ./CollectionSpec { <#./%title %noloc: \<CollectionSpec>#>
+An element of a collection specification list. Corresponds to <#ref M/model/querying/basic-queries/collection-spec#> concept in FDOM. Can be one of the following objects...
+
+- <#ref I/Item#>: a directly specified single item
+- <#ref I/Collection#>: a directly specified collection, is unwrapped and appended flat
+- string: name of a single item, or of a collection alias if such named alias is set in the context (the collection alias lookup has preference over an item name)
+- array: of collection item specs - is processed like if it was unwrapped flat into the collectionSpecs list (arbitrary nesting is possible)
+- `{ union: [nestedCollectionSpecs] }`: a set union of collections specified by the array of elements, each of which is also a collection spec item (arbitrary nesting is possible,
+but note that every item spec at `union`'s list topmost level specifies operands for union operation, not a concatenation)
+- `{ intersect: [nestedCollectionSpecs] }`: a set intersection of collections specified by the array of elements, each of which is also a collection spec item (arbitrary nesting is possible,
+but note that every item spec at `intersect`'s list topmost level specifies operands for intersect operation, not a concatenation)
+- `{ subtract: [nestedCollectionSpecs] }`: a set difference of collections specified by the array of elements (subtracting 2nd and on elements from 1st element), each of which is also
+a collection spec item (arbitrary nesting is possible, but note that every item spec at `subtract`'s list topmost level specifies operands for subtract operation, not a concatenation)
+#LP } CollectionSpec
+
+#LP ./Condition { <#./%title %noloc: \<Condition>#>
+An element of a condition specification list. Corresponds to <#ref M/model/querying/basic-queries/conditions#> concept in FDOM. Can be one of the following objects...
+
+- string: condition reference by alias
+- boolean: boolean constant type condition
+- `{ isAnyOf: <CollectionSpec> }`: the `isAnyOf` type condition
+- `{ hasMembersNamed: <string | RegExp> }`: the `hasMembersNamed` type condition, regexp can be given as JS `RegExp` (no flags should be used except for `i`) or as a regexp source string (assuming no regexp flags)
+- `{ hasMembersThat: <Condition> }`: the `hasMembersThat` type condition
+- `{ hasAnyOfTags: <CollectionSpec> }`: the `hasAnyOfTags` type condition
+- `{ hasAllOfTags: <CollectionSpec> }`: the `hasAllOfTags` type condition
+- `{ hasParentThat: <Condition> }`: the `hasParentThat` type condition
+- `{ named: <string | RegExp> }`: the `named` type condition, regexp can be given as JS `RegExp` (no flags should be used except for `i`) or as a regexp source string (assuming no regexp flags)
+- `{ and: [ ...<Condition> ] }`: the `and` type condition, the argument is array of `<Condition>` objects
+- `{ or: [ ...<Condition> ] }`: the `or` type condition, the argument is array of `<Condition>` objects
+- `{ not: <Condition> }`: the `not` type condition
+
+#LP } Condition
+
+#LP ./QuerySpec { <#./%title %noloc: \<QuerySpec>#>
+An element of a basic query specification list. Corresponds to <#ref M/model/querying/basic-queries#> concept in FDOM. Can be one of the following objects...
+
+- string: reference to an aliased query by the alias name given as string
+- <#ref I/Query#>: a pre-compiled query object
+- `[ ...<QuerySpec> ]`: array of query specs, a composite query where the components are applied in the listed order
+- `{ alias: string }`: <#ref M/model/querying/basic-queries/alias#>, alias name to set is given as string
+- `{ with: <CollectionSpec> }`: <#ref M/model/querying/basic-queries/with#>
+- `{ membersThat: <Condition>, on?: <CollectionSpec>, recursive?: boolean }`: <#ref M/model/querying/basic-queries/membersThat#>
+- `{ tagsThat: <Condition>, on?: <CollectionSpec>, recursive?: boolean }`: <#ref M/model/querying/basic-queries/tagsThat#>
+- `{ inMembersThat: <Condition>, query: [ ...<QuerySpec> ], on?: <CollectionSpec>, recursive?: boolean }`: <#ref M/model/querying/basic-queries/inMembersThat#>
+- `{ inTagsThat: <Condition>, query: [ ...<QuerySpec> ], on?: <CollectionSpec>, recursive?: boolean }`: <#ref M/model/querying/basic-queries/inTagsThat#>
+- `{ inItemsThat: <Condition>, query: [ ...<QuerySpec> ], on?: <CollectionSpec>, recursive?: boolean }`: <#ref M/model/querying/basic-queries/inItemsThat#>
+- `{ subtractQuery: [ ...<QuerySpec> ], on?: <CollectionSpec> }`: <#ref M/model/querying/basic-queries/subtractQuery#>
+- `{ unionQuery: [ ...<QuerySpec> ], on?: <CollectionSpec> }`: <#ref M/model/querying/basic-queries/unionQuery#>
+- `{ intersectQuery: [ ...<QuerySpec> ], on?: <CollectionSpec> }`: <#ref M/model/querying/basic-queries/intersectQuery#>
+- `{ sideQuery: [ ...<QuerySpec> ], on?: <CollectionSpec> }`: <#ref M/model/querying/basic-queries/sideQuery#>
+
+#LP } QuerySpec
+
+#LP ./Context %type {
+<#./%title %noloc: \<QueryContext>#>
+Handle for making queries that also holds auxiliary state (namespace aliases, named collection references, and ongoing query subject).
+If it is a reader resource that needs to be explicitly disposed, the implementation documentation must emphasize that, stipulate the object lifetime, and provide a disposal method.
+
+#LP ./item %member %method { <#./%title %noloc: .item([baseItem ,] name)#>
+Return item by given path name, either full or relative to the provided base item. The full item name's first segment shortname can be a name alias defined in this <#ref Context#>.
+
+	#LP ./baseItem %arg {
+	Optional. The base item to apply <#ref item/name#> path to. <#ref I/Item#>, string or array of strings.
+	
+	String is treated as full path name, array of strings is treated as full path given by list of shortname components.
+	The path, whether given by string or array of components, can start with name alias defined in this <#ref Context#>.
+
+	If the relative name is given, say `some/path`, and the `baseItem` provided has path `base/item`, then the resulting item is assumed by path `base/item/some/path`.
+	#LP }
+
+	#LP ./name %arg {
+	The path to item. String or array of strings. Can begin with a name alias defined in this <#ref Context#>.
+	#LP }
+
+	#LP ./%return: The target item, as <#ref I/Item#>. Must always be non-null object - a non-existing item in the model is implicitly created as null-item.
+#LP } item
+
+#LP ./nameAlias %member %method { <#./%title %noloc: .nameAlias(aliasName, item)#>
+Set an item alias name (which should be a valid shortname), that can later be used as standalone item name or as starter for another item name within this <#ref Context#>.
+Behaviour in case of already existing alias with the given name is implementation specific.
+
+	#LP ./aliasName %arg: Alias name, string.
+	#LP ./item %arg: The item to alias. String (a full path name, probably including another alias) or <#ref I/Item#>.
+
+	#LP ./%return: Self (<#ref Context#>), allowing to chain more calls
+#LP }
+
+#LP ./collection %member %method { <#./%title %noloc: .collection(...collectionSpecs)#>
+Returns a collection specified by a list of collection item specs. Each list item is a <#ref I/CollectionSpec#>.
+
+Each collection item spec is processed and appended to the result individually, regardless on logic of the other item specs, but in any case no <#ref I/Item#> will be contained in the result
+more than once.
+	#LP ./collectionSpecs %arg: Each list item is a <#ref I/CollectionSpec#>.
+	#LP ./%return: The collection, as <#ref I/Collection#>
+#LP } collection
+
+#LP Context/with %member %method { <#./%title %noloc: .with(...collectionSpecs)#>
+Set current collection for the subsequent query (call to <#ref Context/query#>). Collection is built up from collections corresponding to each element of the specs list.
+`.with` effectively initiates the query chain, but can be used in the middle of the chain as well to override the current collection after a certain step.
+	#LP ./collectionSpecs %arg: Each list item is a <#ref I/CollectionSpec#>.
+	#LP ./%return: Self (<#ref Context#>), allowing to chain more calls
+#LP } <-#with#>
+
+#LP Context/query %member %method { <#./%title %noloc: .query(...querySpecs)#>
+Perform a query, or a list of queries intepreted as a composite query, given the current collection specified by preceding <#ref Context/with#> or resulting from previous `.query` calls.
+Note that the resulting collection is not returned immediately, it becomes new current collection instead.
+	#LP ./querySpecs %arg: Each list item is a <#ref I/QuerySpec#>.
+	#LP ./%return: Self (<#ref Context#>), allowing to chain more calls
+#LP } <-#query#>
+
+#LP Context/teardownCollection %member %method { <#./%title %noloc: .teardownCollection()#>
+Finalize the query and return the result (the current collection at time of the call). The current collection itself is reset, so the next query must be re-initialized, starting over from <#ref Context/with#>.
+	#LP ./%return: Result, as <#ref I/Collection#>
+#LP } <-#teardownCollection#>
+
+#LP Context/conditionAlias %member %method { <#./%title %noloc: .conditionAlias(aliasName, condSpec)#>
+Set a named condition alias that can be used later to reference the condition within this context (<#ref I/Condition#>).
+
+Implementation-specific method to clear the alias may be provided.
+	#LP ./aliasName %arg: String, the alias name
+	#LP ./condSpec %arg: Condition spec, a single <#ref I/Condition#>.
+	#LP ./%return: Self (<#ref Context#>), allowing to chain more calls
+#LP } <-#conditionAlias#>
+
+#LP Context/collectionAlias %member %method { <#./%title %noloc: .collectionAlias(aliasName, ...collectionSpecs)#>
+Set a named collection alias that can be used later to reference the collection within this context (<#ref I/CollectionSpec#>). The collection is built up from collections corresponding to each element of the
+specs list. This alias is permament within the context, unlike query local alias (<#ref M/model/querying/basic-queries/alias#>).
+
+Implementation-specific method to clear the alias may be provided.
+	#LP ./collectionSpecs %arg: Each list item is a <#ref I/CollectionSpec#>.
+	#LP ./%return: Self (<#ref Context#>), allowing to chain more calls
+#LP } <-#collectionAlias#>
+
+#LP Context/currentCollectionAlias %member %method { <#./%title %noloc: .currentCollectionAlias(aliasName)#>
+Set a named collection alias for the current collection that can be used later to reference the collection within this context (<#ref I/CollectionSpec#>). Only is usable mid query (when the current collection is
+meaningful), otherwise it is an error. This is a local query alias, unlike a permament one (<#ref M/model/querying/basic-queries/alias#>).
+
+Implementation-specific method to clear the alias may be provided.
+	#LP ./%return: Self (<#ref Context#>), allowing to chain more calls
+	#LP ./%errors: Throws an error if there is no current collection in the context.
+#LP } <-#collectionAlias#>
+
+#LP Context/queryAlias %member %method { <#./%title %noloc: .queryAlias(aliasName, ...querySpecs)#>
+Set a named query alias that can be used later to reference the query within this context (<#ref I/QuerySpec#>). The list is interpreted as a composite query.
+
+Implementation-specific method to clear the alias may be provided.
+	#LP ./aliasName %arg: String, the alias name
+	#LP ./querySpecs %arg: Each list item is a <#ref I/QuerySpec#>.
+	#LP ./%return: Self (<#ref Context#>), allowing to chain more calls
+#LP } <-#queryAlias#>
+
+#LP Context/compileQuery %member %method { <#./%title %noloc: .compileQuery(...querySpecs)#>
+Compile a query into a handle object usable later to reference the query within this context (<#ref I/QuerySpec#>). The list is interpreted as a composite query.
+
+This method can be considered as "anonymous" version of <#ref Context/queryAlias#> for better code side use convenience and possibly optimization, as the various queries are typically quite diverse and numerous,
+and it may be not practical to have a named alias for each one.
+
+Implementation-specific method to dispose the compiled query may be provided.
+	#LP ./querySpecs %arg: Each list item is a <#ref I/QuerySpec#>.
+	#LP ./%return: The compiled query object (<#ref I/Query#>).
+#LP } <-#compileQuery#>
+
+#LP } Context
+
+#LP } lpgread-interface

@@ -1,0 +1,287 @@
+//#charset utf-8
+{
+	"+ config": {
+	},
+	lp-extract: {
+		"+ config": {
+			"+ excludeInFiles": ["node_modules/**"]
+		},
+		"items": [
+			{
+				SKIP: 0,
+				inFiles: ["**/*.js", "**/*.lpson"],
+				excludeInFiles: [],
+				outDir: "lp-extract.gen",
+				reader: "${LP_HOME}/lpxread-basic" $,
+				lpxread-basic: {
+					srcType: "generic-c-like"
+				}
+			},
+			{
+				SKIP: 0,
+				inRootDir: ".",
+				inFiles: ["**/*.lp-txt"],
+				excludeInFiles: ["**/*inc*.lp-txt"],
+				outDir: "lp-extract.gen",
+				reader: "${LP_HOME}/lpxread-basic" $,
+				lpxread-basic: {
+					srcType: "lp-text"
+				}
+			},
+			{
+				SKIP: 0,
+				inRootDir: ".",
+				inFiles: ["**/*inc*.lp-txt"],
+				excludeInFiles: [],
+				forLPInclude: true,
+				outDir: "lp-extract.gen/lp-includes",
+				reader: "${LP_HOME}/lpxread-basic" $,
+				lpxread-basic: {
+					srcType: "lp-text"
+				}
+			}
+		]
+	},
+	lp-compile: {
+		"+ config": {
+		},
+		items: [
+			{
+				SKIP: 0,
+				inRootDir: "lp-extract.gen",
+				lpIncLookupDirName: "lp-includes",
+				writer: "${LP_HOME}/lpcwrite-basic-json" $,
+				lpcwrite-basic-json: {
+					outFile: "lp-compile.gen/logipard-doc-fdom.json",
+					extraTags: {
+						"img": "file"
+					}
+				}
+			}
+		]
+	},
+	lp-generate: {
+		"+ config": {
+		},
+		items: [
+			{
+				//SKIP: true,
+				inFile: "lp-compile.gen/logipard-doc-fdom.json",
+				writer: "${LP_HOME}/lpgwrite-i18n-assist" $,
+				lpgwrite-i18n-assist: {
+					translator: "${LP_HOME}/lpgwrite-i18n-assist-trn-none" $,
+					items: [
+						{
+							outFile: "lp-compile.gen/logipard-doc-fdom-ru.json",
+							interimFile: "lpgwrite-i18n.lp/logipard-doc-fdom-ru.i18n.txt",
+							interimFileCharset: "utf-8",
+							translatorArgs: { lang: "ru" }
+						}
+					]
+				}
+			},
+
+			// main, en
+			{
+				//SKIP: true,
+				inFile: "lp-compile.gen/logipard-doc-fdom.json",
+				writer: "${LP_HOME}/lpgwrite-example" $,
+				lpgwrite-example: {
+					trace: false,
+					program: file("${LP_HOME}/lpgwrite-example-docprg.lpson" $, {
+						docprgPrologue: file("lp-docprg-items.lpson").docprgPrologue,
+						docRootItems: file("lp-docprg-items.lpson").docRootItems,
+						//docRootItems: file("lp-docprg-items.lpson").docRootItems2,
+						LS_EXTENDS: "Extends (is a)",
+						LS_MEMBERS: "Members",
+						LS_NAME: "Name",
+						LS_DESCRIPTION: "Description",
+						LS_MEMBERS_FROM_EXTENTS: "Members from extents",
+						LS_ARGUMENTS: "Arguments",
+						LS_RETURNS: "Returns:",
+						LS_ERRORS: "Errors:",
+						LS_MEMBERS_DETAILED: "Members (detailed)",
+						LS_MEMBERS_FROM_EXTENTS_DETAILED: "Members from extents (detailed)",
+						LS_ARGUMENTS_DETAILED: "Arguments (detailed)",
+						LS_NOTES: "Notes",
+						LS_PROPERTIES: "Properties",
+						LS_PROPERTIES_FROM_EXTENTS: "Properties from extents",
+						LS_METHODS: "Methods",
+						LS_METHODS_FROM_EXTENTS: "Methods from extents"
+					}),
+					renders: [
+						{
+							docModel: "DocMain",
+							renderer: "${LP_HOME}/lpgwrite-example-render-html" $,
+							lpgwrite-example-render-html: {
+								outFile: "site/index.html",
+								emitToc: true,
+								inTemplateFile: "logipard-doc.tpl.html",
+								cssClasses: {
+									-itemTitle: "itemTitle",
+									-rawTitle: "rawTitle",
+									-paragraph: "paragraph",
+									-verbatimSpan: "verbatimSpan",
+									-linkSpan: "linkSpan",
+									-moreSpan: "moreSpan",
+									-elsewhereSpan: "elsewhereSpan",
+									-actionSpan: "actionSpan",
+									-offSiteBlock: "offSiteBlock"
+								},
+								htmlPlaceholder: "HTML_TARGET",
+								cssPlaceholder: "CSS_TARGET",
+								localizedKeywords: {
+									SNAPBACK: "Snapback",
+									SNAPBACK_AND_SCROLL: "Snapback & Scroll",
+									ELEVATE: "Elevate",
+									RESET: "Reset",
+									ELEVATE_TO: "Elevate to...",
+									COPY_ITEM_NAME: "Copy this item's LP FDOM full name to clipboard:",
+									ITEM_UNFOLDED_ELSEWHERE: "Item unfolded elsewhere on page, click/tap to unfold here...",
+									MORE: "More... >>",
+									TABLE_OF_CONTENTS: "Table of contents"
+								},
+								addSourceRef: true
+							}
+						}
+					]
+				}
+			},
+
+			// readme, en
+			{
+				//SKIP: true,
+				inFile: "lp-compile.gen/logipard-doc-fdom.json",
+				writer: "${LP_HOME}/lpgwrite-example" $,
+				lpgwrite-example: {
+					trace: false,
+					program: file("${LP_HOME}/lpgwrite-example-docprg.lpson" $, {
+						docprgPrologue: file("lp-docprg-items.lpson").docprgPrologue,
+						docRootItems: file("lp-docprg-items.lpson").docRootItemsReadme,
+					}),
+					"renders": [
+						{
+							docModel: "DocMain",
+							renderer: "${LP_HOME}/lpgwrite-example-render-md" $,
+							lpgwrite-example-render-md: {
+								outFile: "README.md",
+								emitToc: true,
+								addSourceRef: false,
+								// put some text into header to precede TOC
+								header: ```
+# Logipard: A Tool and Framework for Generating Software Documentation #
+
+Logipard is a tool and framework for generating software documentation by extracting annotations from source code comments and other text sources. It works somewhat similar to tools
+like Doxygen, Javadoc, ROBODoc, etc., but addresses several shortcomings found in the existing solutions.
+
+- Readme pages: [EN](README.md), [RU](README-ru.md)
+- Full documentation pages: TODO
+---
+								```,
+								footer: ```
+---
+The page generated by Logipard 1.0.0 using lpgwrite-example + lpgwrite-example-render-md generator
+								```
+							}
+						}
+					]
+				}
+			},
+
+			// main, ru
+			{
+				//SKIP: true,
+				inFile: "lp-compile.gen/logipard-doc-fdom-ru.json",
+				writer: "${LP_HOME}/lpgwrite-example" $,
+				lpgwrite-example: {
+					trace: false,
+					program: file("${LP_HOME}/lpgwrite-example-docprg.lpson" $, {
+						docprgPrologue: file("lp-docprg-items.lpson").docprgPrologue,
+						docRootItems: file("lp-docprg-items.lpson").docRootItems,
+						LS_EXTENDS: "Расширяет (является)",
+						LS_MEMBERS: "Члены",
+						LS_NAME: "Имя",
+						LS_DESCRIPTION: "Описание",
+						LS_MEMBERS_FROM_EXTENTS: "Члены из расширеяемых",
+						LS_ARGUMENTS: "Параметры",
+						LS_RETURNS: "Возвращает:",
+						LS_ERRORS: "Ошибки:",
+						LS_MEMBERS_DETAILED: "Члены (подробно)",
+						LS_MEMBERS_FROM_EXTENTS_DETAILED: "Члены из расширяемых (подробно)",
+						LS_ARGUMENTS_DETAILED: "Параметры (подробно)",
+						LS_NOTES: "Примечания",
+						LS_PROPERTIES: "Свойства",
+						LS_PROPERTIES_FROM_EXTENTS: "Свойства из расширяемых",
+						LS_METHODS: "Методы",
+						LS_METHODS_FROM_EXTENTS: "Методы из расширяемых"
+					}),
+					renders: [
+						{
+							docModel: "DocMain",
+							renderer: "${LP_HOME}/lpgwrite-example-render-html" $,
+							lpgwrite-example-render-html: {
+								outFile: "site/index-ru.html",
+								emitToc: true,
+								inTemplateFile: "logipard-doc.tpl.html",
+								htmlPlaceholder: "HTML_TARGET",
+								cssPlaceholder: "CSS_TARGET",
+								localizedKeywords: {
+									SNAPBACK: "Вернуть",
+									SNAPBACK_AND_SCROLL: "Вернуть и перейти",
+									ELEVATE: "Поднять",
+									RESET: "Сбросить",
+									ELEVATE_TO: "Поднять до...",
+									COPY_ITEM_NAME: "Копировать полное имя модели LP FDOM этого элемента в буфер:",
+									ITEM_UNFOLDED_ELSEWHERE: "Элемент развёрнут в другом месте страницы - нажмите, чтобы развернуть здесь...",
+									MORE: "Ещё... >>",
+									TABLE_OF_CONTENTS: "Содержание"
+								},
+								addSourceRef: false
+							}
+						}
+					]
+				}
+			},
+
+			// readme, ru
+			{
+				//SKIP: true,
+				inFile: "lp-compile.gen/logipard-doc-fdom-ru.json",
+				writer: "${LP_HOME}/lpgwrite-example" $,
+				lpgwrite-example: {
+					trace: false,
+					program: file("lpgwrite-example-docprg.lpson", {
+						docprgPrologue: file("lp-docprg-items.lpson").docprgPrologue,
+						docRootItems: file("lp-docprg-items.lpson").docRootItemsReadme,
+					}),
+					"renders": [
+						{
+							docModel: "DocMain",
+							renderer: "${LP_HOME}/lpgwrite-example-render-md" $,
+							lpgwrite-example-render-md: {
+								outFile: "README-ru.md",
+								emitToc: true,
+								addSourceRef: false,
+								// put some text into header to precede TOC
+								header: ```
+# Logipard: Инструмент и фреймворк для генерации документации к программному обеспечению #
+
+Logipard -- это инструмент и фреймворк для генерации документации к программному обеспечению путем извлечения аннотаций из комментариев в исходном коде и других текстовых источников.
+Он работает по сходному принципу с такими инструментами, как Doxygen, Javadoc, ROBODoc итд., но устраняет ряд недостатков, присущих существующим решениям.
+
+- Readme-страницы: [EN](README.md), [RU](README-ru.md)
+- Страницы с полной документацией: TODO
+---
+								```,
+								footer: ```
+---
+The page generated by Logipard 1.0.0 using lpgwrite-example + lpgwrite-example-render-md generator
+								```
+							}
+						}
+					]
+				}
+			},
+		]
+	}
+}

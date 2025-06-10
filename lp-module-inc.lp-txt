@@ -1,0 +1,15 @@
+#LP-alias M: domain.logipard
+
+#-LP Built-in writers shortcuts from their related config item sections
+#LP-alias M/lp-config.json/members/lp-extract/items[]/reader/builtin-readers: M/stages/extract-stage/builtin-readers
+#LP-alias M/lp-config.json/members/lp-compile/items[]/writer/builtin-writers: M/stages/compile-stage/builtin-writers
+#LP-alias M/lp-config.json/members/lp-generate/items[]/writer/builtin-writers: M/stages/generate-stage/builtin-writers
+
+#LP M {
+
+#-LP Note: this is common include file for all Logipard module documentation sources and is to be included at start, after this file the scope proceeds inside M.
+Note 2: the file is processed by job item that places it under lp-extract.gen/lp-modules as forLPInclude (.lpinput-inc suffix), this way it can be included by
+`<#~~#LP-include lp-module-inc.lp-txt~~#>`.
+Note 3: this is #-LP tag, which is treated as commented out, so this text doesn't get into the extracted input. In fact, the common include files must not contain
+any input that adds any effective content, as they are included into multiple files, and every extra content in them will be duplicated in the output for each inclusion.
+Only recommended things are: macros, aliases, and scope openers (like M here).

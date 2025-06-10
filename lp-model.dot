@@ -1,0 +1,68 @@
+digraph G {
+    rankdir = LR;
+    packmode = "array_u";
+
+    subgraph cluster_Main {
+        peripheries = 0;
+        
+        root [shape=rectangle label="[ROOT]"];
+        nodeA [shape=rectangle];
+        "nodeA.content" [shape=egg label="content" style=filled bgcolor="#c0c0c0"];
+        "subNodeA-1" [shape=rectangle];
+        "subNodeA-1.content" [shape=egg label="content" style=filled bgcolor="#c0c0c0"];
+        "subNodeA-2" [shape=rectangle];
+        "subNodeA-2.content" [shape=egg label="content" style=filled bgcolor="#c0c0c0"];
+        "subNodeA-3" [shape=rectangle];
+        "subNodeA-3.content" [shape=egg label="content" style=filled bgcolor="#c0c0c0"];
+        "subNodeA-3-1" [shape=rectangle];
+        "subNodeA-3-1.content" [shape=egg label="content" style=filled bgcolor="#c0c0c0"];
+        nodeB [shape=rectangle];
+        "nodeB.content" [shape=egg label="content" style=filled bgcolor="#c0c0c0"];
+        tag1 [shape=rectangle label="%tag1"];
+        "tag1.content" [shape=egg label="content" style=filled bgcolor="#c0c0c0"];
+        moreTags [shape=rectangle];
+        "moreTags.content" [shape=egg label="content" style=filled bgcolor="#c0c0c0"];
+        tag2 [shape=rectangle label="%tag2"];
+        "tag2.content" [shape=egg label="content" style=filled bgcolor="#c0c0c0"];
+        tag3 [shape=rectangle label="%tag3"];
+        "tag3.content" [shape=egg label="content" style=filled bgcolor="#c0c0c0"];
+        
+        root -> nodeA;
+        root -> nodeB;
+        root -> moreTags;
+        root -> tag1;
+        nodeA -> "nodeA.content" [dir=none];
+        nodeA -> "subNodeA-1";
+        nodeA -> "subNodeA-2";
+        nodeA -> "subNodeA-3";
+        "subNodeA-1" -> "subNodeA-1.content" [dir=none];
+        "subNodeA-2" -> "subNodeA-2.content" [dir=none];
+        "subNodeA-3" -> "subNodeA-3-1";
+        "subNodeA-3" -> "subNodeA-3.content" [dir=none];
+        "subNodeA-3-1" -> "subNodeA-3-1.content" [dir=none]
+        nodeB -> "nodeB.content" [dir=none];
+        tag1 -> "tag1.content" [dir=none];
+        moreTags -> "moreTags.content" [dir=none];
+        moreTags -> tag2;
+        moreTags -> tag3;
+        tag2 -> "tag2.content" [dir=none];
+        tag3 -> "tag3.content" [dir=none];
+        
+        "subNodeA-2" -> tag1 [constraint=false style=dotted];
+        "subNodeA-3" -> tag1 [constraint=false style=dotted];
+        "subNodeA-3-1" -> tag2 [constraint=false style=dotted];
+        "subNodeA-3-1" -> tag3 [constraint=false style=dotted];
+    }
+    
+    subgraph cluster_Legend {
+        parentMember [shape=plaintext label="parent"];
+        "parentMember.e" [shape=plaintext label="member"];
+        taggedTag [shape=plaintext label="tagged"];
+        "taggedTag.e" [shape=plaintext label="tag"];
+        nodeContent [shape=plaintext label="node"];
+        "nodeContent.e" [shape=plaintext label="content"];
+        parentMember -> "parentMember.e";
+        taggedTag -> "taggedTag.e" [style=dotted];
+        nodeContent -> "nodeContent.e" [dir=none];
+    }
+}

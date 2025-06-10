@@ -1,0 +1,33 @@
+#LP-include lp-module-inc.lp-txt
+
+#LP M/reading-intro: <#./%title: Reading this document#>
+
+This document is arranged as a static single page, but it is also equipped with some reading UI facilities you may find unfamiliar.
+So, before we start, some words on what you see on the page.
+
+Topics are often nested to a number of levels, and if you scroll around you can notice the headers are sticky, allowing you to keep track on the context
+structure. Clicking on a header will scroll you back to start of that topic. Also, arrows to the left of a header allow you to jump back and forth
+between topics of the same nesting level.
+
+Text fragments outlined like this: <#ref ./snapback#> are Logipard links to some other topics on this page. Unlike plain HTML links,
+they don't throw you to the new location on click. Instead, the linked item is _unfolded_ inline, allowing you to preview the target without loss of visual context
+(try clicking it now to see how it looks).
+
+Probably it isn't too impressive with this particular example, when the item to unfold is within the view already, but it gets more convenient if the target is
+far away.
+
+#LP M/reading-intro/snapback: <#./%title: Snapback and other actions#>
+
+The item is unfolded in brief mode, showing only the basic information. You can click "More" to see more. If you have seen enough and want to
+restore the text disrupted by the unfolding, use __Snapback__ action.
+
+Note that an item only exists on the page in a single instance, so, when unfolded anywhere, it is removed from its previous location.
+You may see a prompt to unfold it back when you get to its primary placeholder.
+
+- Alternative to __Snapback__, which gets the item back to its home location and leaves the view at the same place where you clicked the link,
+you can __Snapback & Scroll__ to snap the item back and scroll the view to it, sort of completing the process you would get from clicking a plain HTML link.
+- If you leave items unfolded at guest locations, you may notice __Reset__ action enabled on headers of the topics they belonged to - this basically
+is quick snapback for all the items moved from under the topic.
+- Finally, you can __Elevate__ the unfolded item, that is, to bring up inline one of its parent topics to see more of the context (may not always be available
+or practical due to document structure).
+- __#LP?__ action allows to obtain the item's name in the documentation model. (This wording will make sense after you get familiar with Logipard concepts.)

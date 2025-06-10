@@ -1,0 +1,665 @@
+#LP-include lp-module-inc.lp-txt
+
+#LP M/lpgwrite-example-program { <#./%title: ${LP_HOME}/lpgwrite-example document program#>
+Document program for <#ref M/interfaces/lpgwrite-example#> is a list of instructions that describe what items to select for emitting into the document page,
+how to arrange the information in them, and building of the context for this operation. Organizationally, the program specifies one or more __document models__
+(definition of set of items to include and their presentation details) that are then referred to from renderer specifications (<#ref M/interfaces/lpgwrite-example/config/renders[]#>).
+In the configuration file, the document program is structured as JSON/LPSON array of commands, which are described below in more details.
+
+A document program may look like:
+```
+[
+	{ nameAlias: "M", name: "domain.logipard" },
+	{
+		docModel: {
+			{
+				name: "DocMain",
+				query: [
+					...
+				],
+				sort: { ... }
+			}
+		},
+		forEachItem: [
+			...
+		]
+	},
+	{
+		docModel: {
+			{
+				name: "DocReadme",
+				query: [
+					...
+				],
+				sort: { ... }
+			}
+		},
+		forEachItem: [
+			...
+		]
+	},
+	...
+]
+```
+
+#LP lpgwrite-example-program/queryspecs { <#./%title: Collection, query and condition specification#> <#./%order: 1#>
+Many of the commands involve specification of conditions, queries, collections, and their aliases, in the terms of <#ref domain.logipard/model/querying#>. In the documentation program,
+these are represented as JSON/LPSON objects, in the way compatible with <#ref M/lpgread-interface#>, as stated below.
+
+#LP queryspecs/condition { <#./%title: Conditions#>
+Any of the objects listed in <#ref M/lpgread-interface/Condition#>.
+
+Will be referred in the following descriptions via `{...condition}` placeholder.
+#LP } <-#condition#>
+
+#LP queryspecs/collection { <#./%title: Collections#>
+Any of the objects listed in <#ref M/lpgread-interface/CollectionSpec#>, except for <#ref M/lpgread-interface/Item#> and <#ref M/lpgread-interface/Collection#> options, as these have no counterparts
+in JSON/LPSON environment.
+
+Will be referred in the following descriptions via `{...collection}` placeholder.
+#LP } <-#collection#>
+
+#LP queryspecs/query { <#./%title: Queries#>
+Any of the objects, or array thereof, listed in <#ref M/lpgread-interface/QuerySpec#>, except for <#ref M/lpgread-interface/Query#> option, as it has no counterpart in JSON/LPSON environment.
+An array is intepreted as composite query, with the components applied in the order. Initial collection for the query depends on context and will be explained in place.
+
+Will be referred in the following descriptions via `{...query}` placeholder.
+#LP } <-#query#>
+
+#LP } <-#queryspecs#>
+
+#LP lpgwrite-example-program/sortspecs { <#./%title: Sorting specification#> <#./%order: 2#>
+In a number of contexts that require specification of a collection, the document program also enables to specify sorting to determine the order in which the collection will be emitted/presented.
+The sorting spec format is as follows:
+```
+{
+	byMember: "member-name",
+	keyFormat: "lexical|natural",
+	order: "asc|desc"
+}
+```
+
+Will be referred in the following descriptions via `{...sort}` placeholder.
+
+#LP ./%extra {
+
+#LP ./byMember %member: String. Specifies short name of the member to use as a sorting key. The key consists of the member's content which is interpreted as plain text with trimmed leading and trailing
+whitespaces. The member is assumed to contain no nested LP markup, otherwise the actual key contains an unguaranteed value. Key comparison is case sensitive.
+
+If the key member is absent, the item is keyless. The keyless items are placed in unspecified order after all of the sorted items.
+
+#LP ./keyFormat %member: String, optional (default is `lexical`). Can be `lexical` or `natural`:
+- `lexical`: the keys are compared as strings (using string lexicographical comparison).
+- `natural`: the keys are split into and compared lexicographically as sequences of numeric and non-numeric fragments, where numeric/numeric sequence segments are compared as numbers,
+and non-numeric/numeric and non-numeric/non-numeric are compared as strings. I. e., `1.2.3-a` and `1.10-z` are compared as `[1, ".", 2, ".", 3, "-a"]` and `[1, ".", 10, "-z"]`, the first differing
+segments are `2` and `3`, which are numeric/numeric case, the `2` is less, so `1.2.3-a` is less than `1.10-z`. If the key starts from `+` or `-` followed by a digit, this `+`/`-` counts as part of the
+number of the first segment, which is considered numeric.
+
+In most cases the most fitting comparison method is natural - it correctly handles such keys as:
+- strings that follow fixed pattern with inclusion of numbers, like `item1`, `item2`, ...`item10`, ...,
+- integer and decimal point containing numbers (with no exponents), like `1`, `-2`, `3.14`,
+- version numbers, like `1.0.3`
+
+#LP ./order %member: String, optional (default is `asc`). Can be `asc` (for ascending sorting order) or `desc` (for descending sorting order).
+
+#LP } <-#sort members#>
+
+#LP } <-#sortspecs#>
+
+#LP lpgwrite-example-program/context-definition { <#./%title: Context definition commands#> <#./%order: 3#>
+These commands that create conditions, query and collection aliases, in the terms of <#ref domain.logipard/model/querying#>. They can be used at program root level to define shared
+context for all models (for example, a conventional alias for project domain name), or be used inside document model specification (see below).
+
+#LP context-definition/nameAlias { <#./%title: Item alias#>
+Sets a named alias for an item. The instruction syntax is: `{ nameAlias: "ItemAliasName", name: "name-string"}`, where `name-string` is a full FDOM name (possibly starting with a previously defined alias).
+Item alias name here must be a valid FDOM shortname.
+
+Counterpart of <#ref M/lpgread-interface/Context/nameAlias#>.
+#LP } <-#nameAlias#>
+
+#LP context-definition/queryAlias { <#./%title: Query alias#>
+Sets a named alias for the query. The instruction syntax is: `{ queryAlias: "QueryAliasName", query: {...query}}`.
+
+Counterpart of <#ref M/lpgread-interface/Context/queryAlias#>.
+
+It is recommended to not have same names for query aliases at root program level and inside the document models to avoid unexpected behaviours.
+#LP } <-#queryAlias#>
+
+#LP context-definition/conditionAlias { <#./%title: Condition alias#>
+Sets a named alias for the condition. The instruction syntax is: `{ conditionAlias: "?CondAliasName", condition: {...condition}}` (using `?` prefix is an optional convention).
+
+Counterpart of <#ref M/lpgread-interface/Context/conditionAlias#>.
+
+It is recommended to not have same names for condition aliases at root program level and inside the document models to avoid unexpected behaviours.
+#LP } <-#conditionAlias#>
+
+#LP context-definition/collectionAlias { <#./%title: Collection alias#>
+Sets a named alias for the condition. The instruction syntax is: `{ collectionAlias: "CollAliasName", collection: {...collection}}`. It is a permament alias that will be shared by the subsequent queries,
+unlike the query local alias that only spans the rest of current query (<#ref M/model/querying/basic-queries/alias#>).
+
+Counterpart of <#ref M/lpgread-interface/Context/collectionAlias#>.
+
+It is recommended to not have same names for collection aliases at root program level and inside the document models to avoid unexpected behaviours.
+#LP } <-#conditionAlias#>
+
+#LP } <-#context-definition#>
+
+#LP lpgwrite-example-program/doc-model-definition { <#./%title: Document model definition#> <#./%order: 3#>
+The documentation program can specify one or more document models. The specification instruction is as follows:
+```
+{
+	docModel: {
+		name: "DocumentModelName",
+		rootItems: {
+			query: {...query},
+			sort: {...sort}
+		},
+		excludeUnder: {...collection}, // optional
+		whitelistUnder: {...collection} // optional
+	},
+	forEachItem: [
+		... // list of item readable content specification instructions
+	]
+}
+```
+#LP ./%extra {
+#LP ./docModel %member {
+Specify the document model name and the set of FDOM items to include into this model.
+
+Note that in the document model the order in which items of a set are emitted into resulting document is defined, and is specified where appropriate
+(see below).
+
+#LP ./name %member: String. Name of the model, will be used to refer to this model from renderer config (see <#ref M/interfaces/lpgwrite-example/config/renders[]/docModel#>).
+#LP ./rootItems %member {
+	The initial slice to start the inclusion set from. Root items set is obtained by a query and added to the list of items. The set will then be expanded
+	to include all items that are referenced (<#ref M/lpinput/ref#>) from, or will be emitted as sub-items of the items already included - all the way down
+	the tree. This set can be then trimmed down (see <#ref docModel/excludeUnder#>, <#ref docModel/whitelistUnder#>).
+	#LP ./query %member: The query to deliver the root items. Initial current collection for this query is empty, so in order to make sense you should start it from `{ with: ... }`
+	basic query (see <#ref M/lpgread-interface/QuerySpec#>).
+	#LP ./sort %member: The sort specification to determine relative order of the root items in the resulting document. Note that it is top-level order only:
+	any sub-items will be emitted after containing item and before its next sibling item, and the ordering within sub-items is specified by the respective
+	emitting instructions.
+#LP } <-#rootItems#>
+#LP ./excludeUnder %member {
+The collection of root items to recursively exclude from the initial set after <#ref docModel/rootItems#>. If `excludeUnder` collection is specified, then,
+whenever an item is in FDOM membership tree of one of these items, it is dropped from document and from any collection based lists/tables, and inline links
+to it are defunct.
+
+This option is useful if you need to exclude certain item trees from the document in a hard way, and it is not practical or reliable to achieve this
+by adjusting <#ref docModel/rootItems#>.
+
+The `excludeUnder` is the inverse to <#ref docModel/whitelistUnder#>, and generally they should not be used together. However, if they are, `excludeUnder`
+is applied first.
+#LP } <-#excludeUnder#>
+
+#LP ./whitelistUnder %member {
+The collection of root items to whitelist in the initial set after <#ref docModel/rootItems#>. If `whitelistUnder` collection is specified, then,
+unless an item is in FDOM membership tree of one of these items, it is dropped from document and from any collection based lists/tables, and inline links
+to it are defunct.
+
+This option is useful if you are generating a document on a limited subscope of the FDOM, and need to guard against leaking information from unnecessary
+scope because of an occasional reference.
+
+The `whitelistUnder` is the inverse to <#ref docModel/excludeUnder#>, and generally they should not be used together. However, if they are, `excludeUnder`
+is applied first.
+#LP } <-#whitelistUnder#>
+
+#LP } <-#docModel#>
+
+#LP ./forEachItem %member %for-toc { <#./%order: 1#> <#LP-alias doc-model-definition/forEachItem: .#> <-# need an alias since this item is under an anonymous member #>
+Specifies the information fragments to include into the readable presentation of each item included into the model. Each instruction can be either
+one of listed in <#ref lpgwrite-example-program/context-definition#> (be sure you don't assign aliases with conflicting names), or one of the instructions
+listed in this section.
+
+#LP ./string { <#./%order: 1#> <#./%title: String (text, field refs, etc.)#>
+An instruction that consists of an integral JSON/LPSON string constant. Can have a number of meanings depending on the string format:
+
+- `"member-field-name"`: any FDOM shortname (note that strings starting from `%%` and `#` are reserved for other instructions and don't fall under this case).
+It tells to emit the immediate content of the given member field of the current item, with no its (sub-)member items, or nothing if there is no such member.
+- `"#text:...arbitrary string..."`: emit the plain text that follows `#text:` prefix, in general inline text style.
+- `"%%title"`: emit the current item's human readable title (content of its `%title` member, or the item's short name if no `%title` is available), in
+a distinguished header style (or as an interactive title element if applicable to the renderer). In general, not required to do this explicitly - a title
+is automatically emitted, unless the item has a private name (shortname starting from `#`).
+- `"%%brief"`: emit the brief part of the item's direct content (its first paragraph, unless it is code block or a list element), in general inline text style.
+- `"%%debrief"`: emit the part of the item's direct content remaining after `%%brief`, in general inline text style. `"%%brief"` instruction followed by
+`"%%debrief"` instruction emit the full item's direct content.
+- `"%%refTitle"`: emit the current item's title, in general inline text style, wrapped into a on-page link (Logipard reference if applicable to the renderer).
+This instruction makes little sense as is, because links from an item's direct content to the item itself are inherently defunct - it is typically used in
+conjunction with `#item` (see below).
+- `"%%more-start"`: this instruction marks location where the content of item viewed in brief mode finishes. Everything below should only be visible in or
+after switching to full mode. This instructon can be only used once per the `forEachTeam` section.
+- `"%%mark-for-toc"`: this instruction indicates that the current item should be included into table-of-contents tree (if applicable to the renderer).
+By default, an item is not marked for TOC, and you should take care to include only items significant enough, otherwise the TOC can become overburdened.
+It is not necessary to mark every level in the branch - the tree is contracted to the marked items only (i. e., if only item and its grandparent item are
+marked, then in the TOC item will appear as direct member of its grandparent).
+- `"#item:...spec..."`: any of the above options, except for `%%more-start` and `%%mark-for-toc`, prefixed by `#item:` - e. g. `#item:%%title`,
+`#item:%%refTitle`, `#item:fieldName`, etc. It is not allowed as a standalone instruction, only inside `emitAsItems...` instruction (see below), and
+it refers to the current item of the iterated sub-collection.
+
+#LP } <-#string#>
+
+#LP ./section-content { <#./%title: section...content#>
+A block of instructions whose output should be placed inside a titled section, which should be emitted in a distinguished sub-header style (less distinctive
+than one of an item title). The instruction is an object as follows:
+```
+{
+	section: "Section Title",
+	content: [
+		...
+	]
+}
+```
+
+	#LP ./%extra {
+	#LP ./section %member: String. The plain text section title.
+	#LP ./content[] %member: Array. A block of instructions (same ones as applicable under <#ref forEachItem#>) that will emit the section's content.
+	#LP } <-#%extra (section-content members)#>
+#LP } <-#section-content#>
+
+#LP ./on-query-as { <#./%title: on...query...as#>
+Perform query on a given collection and set permament alias for the resulting collection (it will replace earlier defined alias, if any). The instruction is an object as follows:
+```
+{
+	on: {...collection},
+	query: {...query},
+	as: "ResultAlias"
+}
+```
+Notion of a current item is optional to this command, so it can be also used outside `docModel`.
+
+	#LP ./%extra {
+	#LP ./on %member: The collection to start with (as in <#ref lpgwrite-example-program/queryspecs/collection#>). Additionally, if used inside `docModel`, a `"%%self"` alias is defined,
+	allowed for the `on` field or inside the query - it refers to the current item.
+	#LP ./query %member: The query to perform, with `on` as initial current collection.
+	#LP ./as %member: String. The alias to set for the resulting collection (will replace earlier defined one and will transfer to next instructions, including `forEachItem` iterations for next items,
+	so keep this in mind to avoid order dependent effects).
+	#LP } <-#%extra (on-query-as members)#>
+#LP } <-#on-query-as#>
+
+#LP ./ifNotEmpty { <#./%title: ifNotEmpty...then#>
+Perform a block of instructions only if the given collection is not empty. The instruction is an object as follows:
+```
+{
+	ifNotEmpty: {...collection},
+	then: [
+		...
+	]
+}
+```
+Notion of a current item is optional to this command, so it can be also used outside `docModel`.
+
+	#LP ./%extra {
+	#LP ./ifNotEmpty %member: The collection to check (as in <#ref lpgwrite-example-program/queryspecs/collection#>).
+	#LP ./then[] %member: Array. A block of instructions (same ones as applicable under <#ref doc-model-definition/forEachItem#>) that will be performed if `ifNotEmpty` collection is not empty.
+	#LP } <-#%extra (ifNotEmpty members)#>
+#LP } <-#ifNotEmpty#>
+
+#LP ./ifCondition { <#./%title: ifCondition...then#>
+Perform a block of instructions only if the given condition on the current item is true. The instruction is an object as follows:
+```
+{
+	ifCondition: {...condition},
+	then: [
+		...
+	]
+}
+```
+
+	#LP ./%extra {
+	#LP ./ifCondition %member: The condition to check (as in <#ref lpgwrite-example-program/queryspecs/condition#>).
+	#LP ./then[] %member: Array. A block of instructions (same ones as applicable under <#ref doc-model-definition/forEachItem#>) that will be performed if `ifCondition` holds.
+	#LP } <-#%extra (ifCondition members)#>
+#LP } <-#ifCondition#>
+
+#LP ./with-emitAsItemsTable { <#./%title: with...[sort...]emitAsItemsTable#>
+Emit the items in the given collection as a table, with a line per collection item, the columns and the column headers as given. The instruction is an object as follows:
+```
+{
+	with: {...collection},
+	sort: {...sort},
+	emitAsItemsTable: [
+		[ "column-header-spec", "column-content-spec" ],
+		...
+	]
+}
+```
+
+	#LP ./%extra {
+	#LP ./with %member: The collection (as in <#ref lpgwrite-example-program/queryspecs/collection#>).
+	#LP ./sort %member: Optional. The sorting specification (as in <#ref lpgwrite-example-program/sortspecs#>) to use on the `with` collection for this table.
+	#LP ./emitItemsAsTable[] %member { Array. Specification of table columns. Each element specifies the column, in left to right order, and is a two-element sub-array:
+		#LP ./[0] %member: String. The column title. Is interpreted as in <#ref doc-model-definition/forEachItem/string#>.
+		#LP ./[1] %member: String. The column content. Is interpreted as in <#ref doc-model-definition/forEachItem/string#>, where `#item:` refers to the element of collection assigned to this line.
+	#LP } <-#emitItemsAsTable[]#>
+	#LP } <-#%extra (emitAsItemsTable members)#>
+#LP } <-#with-emitAsItemsTable#>
+
+#LP ./with-emitAsItemsList { <#./%title: with...[sort...]emitAsItemsList#>
+Emit the items in the given collection as a list, with a line per collection item, made up of concatenated fragments as specified. The instruction is an object as follows:
+```
+{
+	with: {...collection},
+	sort: {...sort},
+	emitAsItemsList: [ "fragment-1-spec" [, "fragment-2-spec", ...] ]
+}
+```
+
+	#LP ./%extra {
+	#LP ./with %member: The collection (as in <#ref lpgwrite-example-program/queryspecs/collection#>).
+	#LP ./sort %member: Optional. The sorting specification (as in <#ref lpgwrite-example-program/sortspecs#>) to use on the `with` collection for this list.
+	#LP ./emitItemsAsList[] %member: Array. Specification of fragments to append to form the list line, in the listed order.
+	Each fragment is a string interpreted as <#ref doc-model-definition/forEachItem/string#>, where `#item:` refers to the element of collection assigned to this line.
+	#LP } <-#%extra (emitAsItemsTable members)#>
+#LP } <-#with-emitAsItemsList#>
+
+#LP ./with-emitAsOwnItems { <#./%title: with...[sort...]emitAsOwnItems#>
+Emit the items in the given collection as a sequence of nested sub-items (each one independently formatted according to <#ref doc-model-definition/%extra/forEachItem#> on its own),
+assuming these are _primary_ locations for the items.
+The instruction is an object as follows:
+```
+{
+	with: {...collection},
+	sort: {...sort},
+	emitAsOwnItems: "basic|full"
+}
+```
+By `lpgwrite-example` convention, an item can be emitted at multiple locations in the document, but only one of them is treated as "home" location. The document format can assume it, for example,
+the actual item's information site, and just put the links to it into all the others (but as well can ignore this hint).
+
+If there are multiple locations for an item per `emitAsOwnItems`/`emitAsExtItems`, `lpgwrite-example` chooses one of them as home location, the ones from `emitAsOwnItems` have more priority for this choice.
+
+	#LP ./%extra {
+	#LP ./with %member: The collection (as in <#ref lpgwrite-example-program/queryspecs/collection#>).
+	#LP ./sort %member: Optional. The sorting specification (as in <#ref lpgwrite-example-program/sortspecs#>) to use on the `with` collection for this list.
+	#LP ./emitAsOwnItems %member { String. Specifies the suggested information mode for the items emitted per this instruction. Can be either of...
+		#LP ./basic %member: Only brief part of the item information should be displayed.
+		#LP ./full %member: Full item information should be displayed.
+	#LP } <-#emitAsOwnItems#>
+	#LP } <-#%extra (emitAsOwnItems members)#>
+#LP } <-#with-emitAsOwnItems#>
+
+#LP ./with-emitAsExtItems { <#./%title: with...[sort...]emitAsExtItems#>
+Emit the items in the given collection as a sequence of nested sub-items (each one independently formatted according to <#ref doc-model-definition/%extra/forEachItem#> on its own),
+assuming these are _secondary_ locations for the items.
+The instruction is an object as follows:
+```
+{
+	with: {...collection},
+	sort: {...sort},
+	emitAsExtItems: "basic|full"
+}
+```
+By `lpgwrite-example` convention, an item can be emitted at multiple locations in the document, but only one of them is treated as "home" location. The document format can assume it, for example,
+the actual item's information site, and just put the links to it into all the others (but as well can ignore this hint).
+
+If there are multiple locations for an item per `emitAsOwnItems`/`emitAsExtItems`, `lpgwrite-example` chooses one of them as home location, the ones from `emitAsOwnItems` have more priority for this choice.
+
+	#LP ./%extra {
+	#LP ./with %member: The collection (as in <#ref lpgwrite-example-program/queryspecs/collection#>).
+	#LP ./sort %member: Optional. The sorting specification (as in <#ref lpgwrite-example-program/sortspecs#>) to use on the `with` collection for this list.
+	#LP ./emitAsOwnItems %member { String. Specifies the suggested information mode for the items emitted per this instruction. Can be either of...
+		#LP ./basic %member: Only brief part of the item information should be displayed.
+		#LP ./full %member: Full item information should be displayed.
+	#LP } <-#emitAsOwnItems#>
+	#LP } <-#%extra (emitAsOwnItems members)#>
+#LP } <-#with-emitAsExtItems#>
+
+#LP ./collDump { <#./%title: collDump[...label]#>
+Print the given collection with an optional given label. Intended for debug purposes.
+The instruction is an object as follows:
+```
+{
+	collDump: {...collection},
+	label: "labelSpec"
+}
+```
+
+	#LP ./%extra {
+	#LP ./collDump %member: The collection (as in <#ref lpgwrite-example-program/queryspecs/collection#>).
+	#LP ./label %member: Optional. String specifying the label. Is interpreted as in <#ref doc-model-definition/forEachItem/string#>.
+	#LP } <-#%extra (emitAsOwnItems members)#>
+#LP } <-#collDump#>
+
+#LP } <-#forEachItem#>
+
+#LP } <-#%extra (doc model memebers)#>
+
+#LP } <-#doc-model-definition#>
+
+#LP lpgwrite-example-program/example-docprg { <#./%title: ${LP_HOME}/lpgwrite-example-docprg.lpson: builtin/example doc program#>
+A "builtin" program for creation of a generic program documentation page, used to generate Logipard documentation itself, and suitable for quickstart. It is intended for use via LPSON `file` facility
+(see <#ref M/LPSON/grammar/L2/expression/file#>) with some added parameters, as shown below, and defines model named `DocMain`:
+```
+	...
+	lpgwrite-example: {
+		...,
+		program: file("${LP_HOME}/lpgwrite-example-docprg.lpson" $, {
+			docprgPrologue: [ ... ], // instructions to inject at the start
+			docRootItems: {...query},
+			LS_EXTENDS: "Extends (is a)",
+			LS_MEMBERS: "Members",
+			LS_NAME: "Name",
+			LS_DESCRIPTION: "Description",
+			LS_MEMBERS_FROM_EXTENTS: "Members from extents",
+			LS_ARGUMENTS: "Arguments",
+			LS_RETURNS: "Returns:",
+			LS_ERRORS: "Errors:",
+			LS_MEMBERS_DETAILED: "Members (detailed)",
+			LS_MEMBERS_FROM_EXTENTS_DETAILED: "Members from extents (detailed)",
+			LS_ARGUMENTS_DETAILED: "Arguments (detailed)",
+			LS_NOTES: "Notes",
+			LS_PROPERTIES: "Properties",
+			LS_PROPERTIES_FROM_EXTENTS: "Properties from extents",
+			LS_METHODS: "Methods",
+			LS_METHODS_FROM_EXTENTS: "Methods from extents"
+		}),
+		renders: [
+			{
+				docModel: "DocMain",
+				renderer: "${LP_HOME}/lpgwrite-example-render-html" $,
+				...
+			},
+			{
+				docModel: "DocMain",
+				renderer: "${LP_HOME}/lpgwrite-example-render-md" $,
+				...
+			},
+			...
+		]
+	}
+```
+
+It also adds several more comprehensions on top of the FDOM model, interpreting certain members and tags as domain hints for a generic programming language. More details described below.
+
+#LP example-docprg/extra-comprehensions { <#./%title: Extra FDOM comprehensions#> <#./%order: 1#>
+
+#LP extra-comprehensions/brief-debrief { <#./%title: Brief and full description#> <#./%order: 1.0#>
+The first paragraph of the item's content is considered its brief description. It is the part visible in the item brief view mode, along with list of the item's most essential data
+(specifically <#ref extra-comprehensions/extends#>, <#ref extra-comprehensions/member#>, <#ref extra-comprehensions/arg#>, <#ref extra-comprehensions/return#>, <#ref extra-comprehensions/errors#>).
+
+#LP } <-#brief-debrief#>
+
+#LP extra-comprehensions/order { <#./%title: %order: ordering control#>
+`lpgwrite-example-docprg` assumes ordering of the nested items according to content of `%order` member, using natural ordering of the string.
+#LP } <-#order#>
+
+#LP extra-comprehensions/for-toc { <#./%title: %for-toc: force TOC addition#>
+By default, `lpgwrite-example-docprg` only includes items to TOC that are not tagged with `%arg`, `%member`, `%method` or `%property` and have "public" shortnames (not starting from `%` or `#`).
+If you have such an item and want to force it in TOC anyway, add `%for-toc` tag to this item.
+#LP } <-#for-toc#>
+
+#LP extra-comprehensions/extends { <#./%title: %extends: extended objects list#>
+The list of objects (i. e. their documentation item names) that the current documented object 'extends' in some subject langage meaning, such as base classes or data records. The members (<#ref ../member#>),
+methods (<#ref ../method#>) and properties (<#ref ../property#>) of the extended objects will be added to the object's documentation in special secondary sections.
+The list is specified by adding the 'extended' items as tags to the `%extends` or `%.extends` member (the member itself should not contain any content except for the added tags).
+#LP } <-#extends#>
+
+#LP extra-comprehensions/member { <#./%title: %member: member items#>
+The list of objects (i. e. their documentation item names) that are 'members' of the current documented object in some subject langage meaning. For example, structure members.
+The member objects are member (in FDOM meaning) items with added `%member` or `%.member` tag. It is possible to combine it with `%property`/`%.property` or `%method`/`%.method` tags.
+#LP } <-#member#>
+
+#LP extra-comprehensions/property { <#./%title: %property: property items#>
+The list of objects (i. e. their documentation item names) that are 'properties' of the current documented object in some subject langage meaning. For example, language object properties.
+The property objects are member (in FDOM meaning) items with added `%property` or `%.property` tag. It is possible to combine it with `%member`/`%.member` or `%method`/`%.method` tags.
+#LP } <-#member#>
+
+#LP extra-comprehensions/method { <#./%title: %method: method items#>
+The list of objects (i. e. their documentation item names) that are 'methods' of the current documented object in some subject langage meaning. For example, language object methods.
+The methods objects are member (in FDOM meaning) items with added `%method` or `%.method` tag. It is possible to combine it with `%member`/`%.member` or `%property`/`%.property` tags.
+
+Note that for languages that allow method overloading, such as Java, C++, partially JS, it may be not practical to use neither literal short names nor their full signature-enabled names for a FDOM name -
+most likely you will want to use some mangled name for FDOM and `%title` to specify the full name for human readability.
+#LP } <-#member#>
+
+#LP extra-comprehensions/arg { <#./%title: %arg: argument items#>
+The list of objects (i. e. their documentation item names) that are 'arguments' of the current documented object in some subject langage meaning. For example, function or constructor arguments.
+The argument objects are member (in FDOM meaning) items with added `%arg` or `%.arg` tag.
+#LP } <-#arg#>
+
+#LP extra-comprehensions/return { <#./%title: %return: returned value description#>
+Description of what is a 'return value' of the current documented object in the subject language meaning. For example, if the object is a function and returns a value.
+Content of `%return` member is assumed to be such description and is appended in the dedicated documentation section. `%return` member is assumed to have no title.
+#LP } <-#return#>
+
+#LP extra-comprehensions/errors { <#./%title: %errors: errors description#>
+Description of what are possible 'errors' within the current documented object in the subject language meaning. For example, list of possible errors thrown from an object.
+Content of `%errors` member is assumed to be such description and is appended in the dedicated documentation section. `%errors` member is assumed to have no title.
+
+There is only one member allocated for all 'errors', but you can leverage flexibility of FDOM here: the `%errors` member can have sub-members, even marked with `%member`.
+#LP } <-#errors#>
+
+#LP extra-comprehensions/notes { <#./%title: %note: additional notes#>
+Any additional information fragments to append to the content before immediate members, probably with nested sub-items, under subsection named 'Notes'.
+The intended usage is by adding anonymous members to `item/%note` like this:
+#LP~n~
+```
+#LP main-item {
+Main item content
+#LP ./%note/~ {
+#LP note 1 content (in-item), with member
+#LP ./note-1-member: note 1 member
+#LP }
+<#LP ./%note/~: note 2 content (in-item), simple#>
+More main item content
+#LP }
+
+#LP main-item/%note/~: note 3 content (off-item)
+```
+#LP~n~
+The notes content is appended after the main item's content, but before the item's members, in flat manner under the 'Notes' subsection.
+
+Notes can be particularly helpful if they are added from different locations that the item primary content, probably even different source files. This way you can add any useful comments
+related to particular item on-site, and then it will be collected in one place as the item's notes section.
+
+Additional advantage of splitting the notes into several objects under `%notes`
+is that there are more options for their ordering control. Appending directly to item's content from multiple sources does not guarantee the resulting order of fragments, and can even disrupt
+your intended convention of what will be brief part of information for this item. On the other hand, 'Notes' section location is well-defined, and members of `%notes` under it obey `%order` hints
+(<#ref extra-comprehensions/order#>).
+
+Any note item can contain sub-items, which will be displayed within this item as usual (with titles etc.), but use these with caution, as anonymous member and its sub-members has no
+safe full name they can be referenced by. You can define an alias, but it will be only in effect within the same input file.
+
+The `%note`'s own direct content and non-anonymous members are not used. For purpose of concern separation, there is a separate capability for this with a different intended use case - see
+<#ref extra-comprehension/extra#>.
+
+#LP } <-#notes#>
+
+#LP extra-comprehensions/extra { <#./%title: %extra: additional inline content#>
+In the `%extra` member you can specify content that will be displayed after the item's main content in inline manner, like it was written at the end of the item's content itself.
+More specifically, it will behave like an extra item with no title inserted before the item's detailed members section (and before 'Notes' section, if available), so it will look like
+continuation to the item's own content. The intended usage is to add content and members to `item/%extra` like this:
+#LP~n~
+```
+#LP main-item {
+Main item content
+#LP ./%extra: main-item's direct extra content
+#LP ./%extra/A %member: main-item's extra member A (in-item)
+More main item content
+#LP ./ownMember %member: main-item's own member
+#LP }
+
+#LP main-item/%extra/B %member {
+main-item's extra B content (off-item)
+#LP ./extra-B-member: extra item B member
+#LP }
+```
+#LP~n~
+
+This example would result in the following visible structure of the `main-item`'s section:
+```
+# main-item
+Main item content
+Members:
+ ownMember | main-item's own member
+// end of main-item's brief info
+More main item content
+ // data from %extra starts here
+ main-item's direct extra content
+ Members: // of %extra
+ A | main-item's extra member A (in-item)
+ B | main-item's extra member B content (off-item)
+ Members (detailed): // of %extra
+ # A
+ main-item's extra member A (in-item)
+ # B
+ main-item's extra member B content (off-item)
+  # extra-B-member
+  extra item B member
+ // data from %extra ends here
+Members (detailed): // of main-item
+ # ownMember
+ main-item's own member
+```
+
+Primary purpose of `%extra` is display control for members in edge cases.
+
+`lpgwrite-example-docprg` places item's direct members tagged with `%member`, `%arg`, `%return`, `%errors`, and the list of their counterparts
+from extents, in the end of item's brief description and before the remaining part of the content. In some cases, this can disrupt the information flow (such as a fenced code fragment
+presenting the item's general look, which should better go before the members list). In order to workaround this inconvenience, you can move the list of members, args etc. from the item itself
+to members of its `./%extra` item. While they will still look "inline", they are logically part of a different item and will not be parts of the main item's brief display flow.
+
+#LP } <-#extra#>
+
+#LP } <-#extra-comprehensions#>
+
+#LP example-docprg/parameters { <#./%title: lpgwrite-example-docprg parameters#> <#./%order: 2#>
+The parameters to `lpgwrite-example-docprg` are provided via added context vars in the LPSON `file` operator:
+#LP parameters/docprgPrologue %member {
+The array of instructions to inject at the very start of the doc program. Typically definition of aliases to be used in <#ref parameters/docRootItems#>.
+#LP } <-#docprgPrologue#>
+
+#LP parameters/docRootItems %member {
+The `rootItems` section (see <#ref M/lpgwrite-example-program/doc-model-definition/%extra/docModel/rootItems#>) of the generated model (`DocMain`). This object will be assigned to the `rootItems`
+entirely as is, with no wrappings and patching, so the user should not rely on any defaults here.
+#LP } <-#docprgPrologue#>
+
+#LP parameters/localization %member {
+The group of predefined titles to use in the generated page. Moved out to a parameter in order to make them localizeable at this point. This object is a dictionary of strings, with member names
+denoting meaning for each string:
+
+- *LS_EXTENDS*: title for section with a list of items from `%extends` list (i. e. ones tagged on `%extends` member)
+- *LS_MEMBERS*: title for section with table of items tagged as `%member`
+- *LS_MEMBERS_FROM_EXTENTS*: title for section with a list of `%member` marked items defined inside the items from `%extends` list, all the way deep through the extendeds tree
+- *LS_PROPERTIES*: title for section with table of items tagged as `%property`
+- *LS_PROPERTIES_FROM_EXTENTS*: title for section with a list of `%property` marked items defined inside the items from `%extends` list, all the way deep through the extendeds tree
+- *LS_METHODS*: title for section with table of items tagged as `%method`
+- *LS_METHODS_FROM_EXTENTS*: title for section with a list of `%method` marked items defined inside the items from `%extends` list, all the way deep through the extendeds tree
+- *LS_ARGUMENTS*: title for section with a table of items tagged as `%arg`
+- *LS_NAME*: title for table column with item name (1st)
+- *LS_DESCRIPTION*: title for table column with item description (2nd)
+- *LS_RETURNS*: title for section with contents of `%return` member
+- *LS_ERRORS*: title for section with contents of `%error` member
+- *LS_MEMBERS_DETAILED*: title for section with full documentations for `%member` marked items
+- *LS_MEMBERS_FROM_EXTENTS_DETAILED*: title for section with full documentations for `%member` marked items defined inside the items from `%extends` list, all the way deep through the extendeds tree
+- *LS_ARGUMENTS_DETAILED*: title for section with full documentations for `%arg` marked items
+- *LS_NOTES*: title for section where all submembers from `%notes` member will be put under
+
+All of these strings are in fact optional, but it is suggested to provide them all. Default values will have `[D]` prefix to mark that they are default placeholders and that it better be fixed.
+#LP } <-#localization#>
+
+#LP } <-#parameters#>
+
+#LP } <-#example-docprg#>
+
+#LP } <-#lpgwrite-example-program#>

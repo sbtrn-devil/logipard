@@ -1,0 +1,17 @@
+//#charset utf-8
+{
+	docprgPrologue: [ { nameAlias: "M", name: "domain.logipard" } ],
+	docRootItems: {
+		query: [
+			{ with: ["M/reading-intro", "M/readme", "M/concepts", "M/model", "M/stages", "M/lp-config.json", "M/reference"] }
+		],
+		sort: { byMember: "%order", keyFormat: "natural", order: "asc" }
+	},
+	docRootItemsReadme: {
+		query: [
+			{ with: ["M/readme"] },
+		],
+		sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+		whitelistUnder: ["M/readme", "M/version-history"]
+	}
+}

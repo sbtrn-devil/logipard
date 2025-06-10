@@ -1,0 +1,28 @@
+{
+  "name": "logipard",
+  "version": "1.0.0",
+  "description": "Toolkit for freeform documentation generation from inline comments",
+  "main": "index.js",
+  "bin": {
+    "lp-cli": "cli.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">= 13.0.0"
+  },
+  "dependencies": {
+    "base62": "^2.0.2",
+    "cliui": "^8.0.1",
+    "commonmark": "^0.31.2",
+    "glob": "7.2.0",
+    "html-entities": "^2.5.2",
+    "iconv-lite": "^0.6.3",
+    "json-beautify": "^1.1.1",
+    "mime": "^3.0.0",
+    "yargs": "^17.7.2"
+  }
+}

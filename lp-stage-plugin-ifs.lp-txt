@@ -1,0 +1,275 @@
+#LP-include lp-module-inc.lp-txt
+
+#LP M/interfaces/extract { <#./%title: Interfaces related to extraction stage#> <#./%order: 1#>
+
+#LP extract/reader { <#./%title: Extraction reader interface#>
+Extraction reader is invoked when processing an extact job item. Its purpose is to parse source file data and to return the extracted annotations in LP input format (<#ref M/lpinput#>).
+It is specified by `reader` field of an extract job item (<#ref M/lp-config.json/members/lp-extract/items[]/reader#>).
+Extraction reader must be implemented as CommonJS module that exposes the following interface...
+
+The interface must be exposed by `reader` module via _module.exports_ similar to:
+```
+exports.parseInput = async function parseInput({ buffer, itemConfig, filePath }) { ... }
+```
+
+#LP extract/reader/parseInput %member %method { <#./%title %noloc: async .parseInput({ buffer, itemConfig, filePath })#>
+Parse the file content, supplied as Node.JS _Buffer_, and return the extraction result in LP input format, as joint single string.
+#LP ./buffer %arg: _Buffer_, the input file supplied in plain binary form. Dealing with encoding is up to the reader.
+#LP ./itemConfig %arg: dictionary (as _Object_), the piece of configuration object related to this job's item (<#ref M/lp-config.json/members/lp-extract/items[]#>).
+The reader can read all members of the item config object, but it is a good style to keep reader-specific configuration under a member sub-object named after the reader.
+#LP ./filePath %arg: string, the path to the file (project root agnostic, ready for standalone use in `fs` or `path`).
+Can be used for reference if information from the file alone is not sufficient for the reader's purposes.
+#LP ./%return: string, expected to contain the extraction in LP input format (<#ref M/lpinput#>).
+#LP ./%errors: The `parseInput` can throw an error to indicate an extraction failure.
+#LP } <-#parseInput#>
+
+#LP } <-#reader#>
+
+#LP } <-#extract#>
+
+#LP M/interfaces/compile { <#./%title: Interfaces related to compilation stage#> <#./%order: 2#>
+
+#LP compile/writer { <#./%title: Compilation writer interface#>
+Compilation writer is invoked when processing a compile job item. Its purpose is to accept FDOM construction/update commands and, based on them, construct/update the corresponding compiled FDOM representation.
+It is specified by `writer` field of a compile job item (<#ref M/lp-config.json/members/lp-compile/items[]/writer#>).
+Compilation writer must be implemented as CommonJS module that exposes the following interface...
+
+The interface must be exposed by `writer` module via _module.exports_ similar to:
+```
+exports.openModelOutput = async function openModelOutput({ itemConfig, workDir }) { ... }
+exports.closeModelOutput = async function closeModelOutput({ modelOutput }) { ... }
+exports.invalidateSourceFile = async function invalidateSourceFile({ modelOutput, sourceFile, newDependencies }) { ... }
+exports.appendContent = async function appendContent({ modelOutput, targetNodeName, content, sourceFile }) { ... }
+exports.tagTo = async function tagTo({ modelOutput, tagNodeName, targetNodeName, sourceFile }) { ... }
+exports.appendRef = async function appendRef({ modelOutput, targetNodeName, refNodeName, refText, sourceFile }) { ... }
+exports.processCustomTag = async function processCustomTag({ modelOutput, targetNodeName, tagName, toolkit, sourceFile }) { ... }
+```
+
+#LP compile/writer/openModelOutput %member %method { <#./%title %noloc: async .openModelOutput({ itemConfig, workDir })#>
+Initialize the compiled model storage, or open the existing one for update.
+#LP ./itemConfig %arg: dictionary (as _Object_), the piece of configuration object related to this job's item (<#ref M/lp-config.json/members/lp-compile/items[]#>).
+The writer can read all members of the item config object, but it is a good style to keep writer-specific configuration under a member sub-object
+named after the writer.
+#LP ./workDir %arg: string, the path to project root directory, ready for standalone use in `fs` or `path`. It is useful if the writer's configuration
+must contain any file/directory paths that should be project root relative.
+#LP ./%return: __model output handle__, an opaque object that will be used as the model handle and passed back to other writer methods.
+#LP ./%errors: The `openModelOutput` can throw an error.
+#LP } <-#openModelOutput#>
+
+#LP compile/writer/closeModelOutput %member %method { <#./%title %noloc: async .closeModelOutput({ modelOutput })#>
+Finalize the model output and invalidate the handle. A writer will be open and closed exactly once per the compile job item, we can call it __model update session__.
+#LP ./modelOutput %arg: Model output handle (as returned by <#ref writer/openModelOutput#>). Assumed no longer valid after this call.
+#LP ./%errors: The `closeModelOutput` can throw an error.
+#LP ./%return: none
+#LP } <-#closeModelOutput#>
+
+#LP compile/writer/invalidateSourceFile %member %method { <#./%title %noloc: async .invalidateSourceFile({ modelOutput, sourceFile, newDependencies })#>
+Invalidate the given source file. All content and tag-ons added from this source file (<#ref writer/appendContent#>, <#ref writer/tagTo#>) should be removed from the storage
+or archived, as they are going to be replaced by a newer version of the input. Note that source file here, as well as in other methods, means __LP input source file__ created at (<#ref M/stages/extract-stage#>), not the
+user-facing annotation source file(s), so it will contain `.lpinput` extension and will be located at the path according to the corresponding extraction job's <#ref M/lp-config.json/members/lp-extract/items[]/outDir#>.
+
+Note that a tag can be applied to a node by commands from multiple sources, so tags must only be removed after invalidation of all sources their application originates from,
+and only if they have not been re-added (see <#ref writer/tagTo#>).
+#LP ./modelOutput %arg: Model output handle (as returned by <#ref writer/openModelOutput#>).
+#LP ./sourceFile %arg: string, the path to the input file to invalidate, relative to the compile job's <#ref M/lp-config.json/members/lp-compile/items[]/inRootDir#>.
+#LP ./%return: none
+#LP ./%errors: The `invalidateSourceFile` can throw an error.
+#LP } <-#invalidateSourceFile#>
+
+#LP compile/writer/appendContent %member %method { <#./%title %noloc: async .appendContent({ modelOutput, targetNodeName, content, sourceFile })#>
+Append content to the specified target node. Only text content is added this way, for other content components there are other methods.
+#LP ./modelOutput %arg: Model output handle (as returned by <#ref writer/openModelOutput#>).
+#LP ./targetNodeName %arg: string, the full FDOM name of the target node where content will be appended.
+#LP ./content %arg: string, the content to append to the target node.
+#LP ./sourceFile %arg: string, the path to the input file from which this content originates, relative to the compile job's <#ref M/lp-config.json/members/lp-compile/items[]/inRootDir#>.
+#LP ./%return: none
+#LP ./%errors: The `appendContent` can throw an error.
+#LP } <-#appendContent#>
+
+#LP compile/writer/tagTo %member %method { <#./%title %noloc: async .tagTo({ modelOutput, tagNodeName, targetNodeName, sourceFile })#>
+Tag a target node with a specific tag node. Can also be worded as "tag (apply) the specific tag node on a given target node". That is, `tagNodeName` node will be added to list of `targetNodeName` node's tags.
+#LP ./modelOutput %arg: Model output handle (as returned by <#ref writer/openModelOutput#>).
+#LP ./tagNodeName %arg: string, the full FDOM name of the tag node to apply.
+#LP ./targetNodeName %arg: string, the full FDOM name of the target node __on which__ the `tagNodeName` will be applied.
+#LP ./sourceFile %arg: string, the path to the input file from which this tagging originates, relative to the compile job's <#ref M/lp-config.json/members/lp-compile/items[]/inRootDir#>.
+Storing the tagging origin makes sense in context of subsequent invalidation (<#ref writer/invalidateSourceFile#>) - a tag stays in effect as long as there remains at least one non-invalidated
+source for applying it. (Note that `tagTo` can be called for same `tagNodeName` and `targetNodeName` multiple times with different `sourceFile`-s.)
+
+Per compile job, and per model update session (see <#ref writer/closeModelOutput#>), <#ref writer/invalidateSourceFile#> is guaranteed to be called before any `tagTo`-s, and exactly once for every
+`sourceFile` for which any `tagTo`-s (and other content adding methods) are invoked. That means, if a tag stays after all source invalidations, then invocation of each `tagTo` will re-validate
+the tag application from the corresponding `sourceFile`.
+#LP ./%return: none
+#LP ./%errors: The `tagTo` can throw an error.
+#LP } <-#tagTo#>
+
+#LP compile/writer/appendRef %member %method { <#./%title %noloc: async .appendRef({ modelOutput, targetNodeName, refNodeName, refText, sourceFile })#>
+Append an inline reference to the specified target node's content.
+#LP ./modelOutput %arg: Model output handle (as returned by <#ref writer/openModelOutput#>).
+#LP ./targetNodeName %arg: String, the full FDOM name of the target node where reference will be appended.
+#LP ./refNodeName %arg: String, the full FDOM name of the referenced node.
+#LP ./refText %arg: String, the alt text of the reference. Can be empty (and should be stored as such in the model, as generators can take it as hint for using an appropriate default display text).
+#LP ./sourceFile %arg: String, the path to the input file from which this reference originates, relative to the compile job's <#ref M/lp-config.json/members/lp-compile/items[]/inRootDir#>.
+#LP ./%return: none
+#LP ./%errors: The `appendRef` can throw an error.
+#LP } <-#appendRef#>
+
+#LP compile/writer/processCustomTag %member %method { <#./%title %noloc: async .processCustomTag({ modelOutput, targetNodeName, tagName, toolkit, sourceFile })#>
+Process a custom inline tag within the specified target node's content. Interpretation of the tag is up to the writer: it may be appending of some model representation specific type of content, or some adjustments
+to the content output process, etc.
+#LP ./modelOutput %arg: Model output handle (as returned by <#ref writer/openModelOutput#>).
+#LP ./targetNodeName %arg: String, the full FDOM name of the target node where the custom tag was encountered.
+#LP ./tagName %arg: String, the name of the custom tag.
+#LP ./toolkit %arg: Object, a set of utility functions provided for custom tag processing. See (<#ref M/interfaces/compile/writer-toolkit#>).
+#LP ./sourceFile %arg: String, the path to the source file where this custom tag originates.
+#LP ./%return: none
+#LP ./%errors: The `processCustomTag` can throw an error.
+#LP } <-#processCustomTag#>
+
+#LP } <-#writer#>
+
+#LP } <-#compile#>
+
+#LP M/interfaces/generate { <#./%title: Interfaces related to generation stage#> <#./%order: 3#>
+
+#LP generate/writer { <#./%title: Generation writer interface#>
+Generation writer is invoked when processing a generate job item. Its purpose is to read the supported compiled representation of FDOM (usually using a compilation reader) and generate the documentation or
+other output it is responsible for.
+It is specified by `writer` field of a generate job item (<#ref M/lp-config.json/members/lp-generate/items[]/writer#>).
+Generation writer must be implemented as CommonJS module that exposes the following interface...
+
+The interface must be exposed by `writer` module via _module.exports_ similar to:
+```
+exports.perform = async function perform({ workDir, itemConfig, errors }) { ... }
+```
+
+#LP generate/writer/perform %member %method { <#./%title %noloc: async .perform({ workDir, itemConfig, errors })#>
+Perform the generation process.
+#LP ./workDir %arg: String, the path to project root directory, ready for standalone use in `fs` or `path`.
+#LP ./itemConfig %arg: Dictionary (as _Object_), the piece of configuration object related to this job's item (<#ref M/lp-config.json/members/lp-generate/items[]#>).
+The writer can read all members of the item config object, but it is a good style to keep writer-specific configuration under a member sub-object
+named after the generator.
+#LP ./errors %arg: Array, a collection of errors (as JS _Error_ objects) encountered during processing that should be appended to.
+#LP ./%return: none
+#LP ./%errors: The `perform` can throw an error, but it is recommended to do so only to mark the overall failure in the end, accumulating the intermediate errors in `errors` if possible.
+#LP } <-#perform#>
+
+#LP } <-#writer#>
+
+#LP generate/lpgwrite-example-renderer { <#./%title: Interface for lpgwrite-example's renderer#>
+The renderer is invoked by <#ref M/stages/generate-stage/builtin-writers/lpgwrite-example#> generator. Its purpose is to produce the document of the format it supports (HTML, MD, etc.) according to
+document structure data supplied by `lpgwrite-example`.
+It is specified by `renders[]/renderer` field of a `lpgwrite-example`'s generate job item (<#ref M/interfaces/lpgwrite-example/config/renders[]/renderer#>).
+Renderer must be implemented as CommonJS module that exposes the following interface...
+
+The interface must be exposed by `renderer` module via _module.exports_ similar to:
+```
+exports.render = async function render({ workDir, rendererConfig, input, errors }) { ... }
+```
+
+#LP lpgwrite-example-renderer/render %member %method { <#./%title %noloc: async .render({ workDir, rendererConfig, input, errors })#>
+Render the output using the specified renderer configuration and input provided by the caller (<#ref M/stages/generate-stage/builtin-writers/lpgwrite-example#>).
+#LP ./workDir %arg: String, the path to project root directory, ready for standalone use in `fs` or `path`.
+#LP ./rendererConfig %arg: Dictionary (as _Object_), the piece of configuration object related to this renderer item (<#ref M/interfaces/lpgwrite-example/config/renders[]#>).
+The renderer can read all members of the item config object, but it is a good style to keep renderer-specific configuration under a member sub-object named after the renderer.
+#LP ./input %arg: The input data to be rendered. Object of this format: <#ref lpgwrite-example-renderer/inputFormat#>.
+#LP ./errors %arg: Array, a collection of errors (as JS _Error_ objects) encountered during rendering that should be appended to.
+#LP ./%return: none
+#LP ./%errors: The `render` can throw an error.
+#LP } <-#render#>
+
+#LP lpgwrite-example-renderer/inputFormat { <#./%title: Input format for lpgwrite-example renderer#>
+Contains the document data to render. Dictionary (as _Object_) with the following members...
+#LP ./toc[] %member { <#./%title %noloc: .toc[]#>
+Array of items for table of contents. Each item is a dictionary (as _Object_) with the following members...
+
+The items are ordered in suggested display order.
+#LP ./title %member: <#./%title %noloc: .title#> String, the item's human readable title.
+#LP ./uid %member: <#./%title %noloc: .uid#> String, the item's UID (key in <#ref inputFormat/itemsByUid#>).
+#LP ./subEntries[] %member: <#./%title %noloc: .subEntries[]#> Array (non-null, at least empty), nested items of this TOC item. Each element has the same structure as a root element of `.toc[]`, including next level
+`.subEntries[]` (and so on).
+
+The items are ordered in suggested display order.
+#LP }
+#LP ./items[] %member { <#./%title %noloc: .items[]#>
+Array of items to display, ordered in the suggested display order when on single page. Each array element is dictionary (as _Object_) with the following members...
+#LP ./uid %member: <#./%title %noloc: .uid#> String, the item's UID, can be used to access this item via <#ref inputFormat/itemsByUid#>.
+#LP ./modelBasic[] %member { <#./%title %noloc: .modelBasic[]#>
+Basic part of item's model to be visible in brief display mode, is always shown. The array (non-null, at least empty) of elements in the display order, each element can contain **some** of the following members...
+#LP ./itemTitle %member: <#./%title %noloc: .itemTitle#>
+String. If the member is present, it marks this element is an item title, and contains the human readable text of the item title.
+#LP ./uid %member: <#./%title %noloc: .uid#>
+String, defined only if <#ref modelBasic[]/itemTitle#> is present. UID of the target (or titled) item, the same as <#ref items[]/uid#>.
+#LP ./item %member: <#./%title %noloc: .item#>
+String. If the member is present, it marks this element is placeholder for emitting a nested item, and contains UID of this item, the same <#ref items[]/uid#>.
+Note that same item (with same UID) can occur multiple times in the document, and one of these occurrences will be suggested as home (primary) location for the item - check <#ref modelBasic[]/isHomeLocation#>
+if this matters for the rendered document format.
+#LP ./isHomeLocation %member: <#./%title %noloc: .isHomeLocation#>
+Boolean, defined only if <#ref modelBasic[]/item#> is present. If true, this location is suggested as the item's home location. There is only one home location for each item.
+#LP ./printType %member: <#./%title %noloc: .printType#>
+String, defined only if <#ref modelBasic[]/item#> is present. Defines the suggested display mode for item emitted into this placeholder. Can be either of:
+- `"brief"`: only brief part of the item data should be displayed
+- `"full"`: the full item data should be displayed
+#LP ./text %member: <#./%title %noloc: .text#>
+String. If the member is present, it is a Markdown text fragment. Some of HTML-like tags, case-sensitive, should be interpreted as LP inline references (the text properties are HTML-encoded):
+
+- `<lp-src file="filename"></lp-src>` (no inner tag text, `file` is HTML-encoded): inline reference to LP input source file, with no `.lpinput` suffix. Is always present, it is up to the renderer to strip
+it or to interpret it.
+- `<lp-ref uid="UID" text="display text"></lp-ref>` (no inner tag text, `uid` and `text` are HTML-encoded): inline LP link to an item (as per <#~~`<#ref ...#>`~~#>). UID is the same as <#ref items[]/uid#>.
+Display text can be empty, in which case it is recommended to use item's title (<#ref items[]/title#>).
+#LP ./openSection %member: <#./%title %noloc: .openSection#>
+String. If the member is present, it marks this element is opener of a titled section, and contains the section ID to be matched in later <#ref modelBasic[]/closeSection#>.
+#LP ./title %member: <#./%title %noloc: .title#>
+String, defined only if <#ref modelBasic[]/openSection#> is present. Title of the opened section.
+#LP ./closeSection %member: <#./%title %noloc: .closeSection#>
+String. If the member is present, it marks this element is closure of a titled section, and contains the section ID to close, matching earlier <#ref modelBasic[]/openSection#>.
+#LP ./table %member { <#./%title %noloc: .table#>
+If the member is present, it marks a table block. Object with the following member properties...
+#LP ./headers[] %member: <#./%title %noloc: .headers[]#>
+Array of headers, in the display order of columns. Each element is a string with column header as markdown text (same as in <#ref modelBasic[]/text#>).
+#LP ./rows[][] %member: <#./%title %noloc: .rows[]#>
+Array of rows, in the display order. Each element is array of columns, in the display order of columns, with each sub-element is a string with column data as markdown text
+(same as in <#ref modelBasic[]/text#>).
+#LP } <#-table#>
+#LP ./list[][] %member: <#./%title %noloc: .list[][]#>
+Array of arrays of string. If the member is present, it marks this element is a (flat unnumbered) list. Each element of the array is a list item, each sub-element is a markdown text
+(same as in <#ref items[]/modelBasic[]/text#>), the sub-elements and are assumed to be appended in the array order to form the line.
+#LP } <#-modelBasic[]#>
+#LP ./modelMode[] %member { <#./%title %noloc: .modelMore[]#>
+The additional part of the item's model to display in full display mode, in addition to basic one. The array (non-null, at least empty) that can contain the same elements
+as <#ref items[]/modelBasic[]#>.
+#LP }
+#LP } <#-items[]#>
+#LP ./itemsByUid %member { <#./%title %noloc: .itemsByUid[uid]#>
+Dicitonary by UID (string). Same items as <#ref inputFormat/items[]#> expanded flat, but keyed by UID (<#ref inputFormat/items[]/uid#>).
+#LP } <-#itemsByUid#>
+#LP } <-#inputFormat#>
+
+#LP } <-#lpgwrite-example-renderer#>
+
+#LP generate/lpgwrite-i18n-assist-translator { <#./%title: Interface for lpgwrite-i18n-assist's translator#>
+The translator is invoked by <#ref M/stages/generate-stage/builtin-writers/lpgwrite-i18n-assist#> generator. Its purpose is to return initial translation for a given string, according to the locale information
+supplied.
+It is specified by `translator` field of a `lpgwrite-example`'s generate job item (`lpgwrite-example/translator`).
+Translator must be implemented as CommonJS module that exposes the following interface...
+
+The interface must be exposed by `translator` module via _module.exports_ similar to:
+```
+exports.translate = async function translate(str, translatorArgs) { ... }
+```
+
+#LP ./translate %member %method { <#./%title %noloc: async .translate(str, translatorArgs)#>
+Perform the translation and return the result.
+#LP ./str %arg: String, the string to translate.
+The string is assumed to be a Markdown code, with the following possible HTML-ish tags:
+- `<lp-ref item="FDOM name">ref alt text</lp-ref>`: a LP inline link. The `ref alt text` can be translated (note it is HTML-encoded), the rest part must be left intact.
+- `<lp-tag>...text...</lp-tag>`: a custom markup tag (as per <#ref M/interfaces/lpcwrite-basic-json/config/extraTags#>). ...text... is the HTML-encoded JSON code of the object and should remain such in the
+translation result. It is up to the translator to be aware of what custom tags are possible and what is the correct translation scope within them. In an unidentifiable case, this fragment should be left as is.
+
+#LP ./translatorArgs %arg: The agrument value specified for the translator in <#ref M/interfaces/lpgwrite-i18n-assist/extra-item-config/items[]/translatorArgs#>. Passed as the object from configuration as is.
+#LP ./%return: The translated <#ref translate/str#>, given the caveats mentioned there. It is also recommended to add a proof read hint mark to the translated string.
+#LP ./%errors: The `translate` can throw an error.
+#LP } <-#perform#>
+
+#LP } <-#lpgwrite-i18n-assist-translator#>
+
+#LP } <-#generate#>

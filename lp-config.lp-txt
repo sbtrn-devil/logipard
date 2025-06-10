@@ -1,0 +1,214 @@
+#LP-include lp-module-inc.lp-txt
+
+#LP M/lp-config.json {
+<#./%title: Logipard configuration file#>
+Project configuration is passed to Logipard in a JSON formatted (more exactly, <#ref M/LPSON#> formatted) configuration file of the following structure:
+```
+{
+	// optional (note there is exactly single space after '+')
+	"+ config": {
+		...
+	},
+	// mandatory, configuration for extract stage
+	"lp-extract": {
+		// optional
+		"+ config": {
+			...
+		},
+		// mandatory
+		"items": [
+			{
+				"SKIP": bool, // optional, non-false value comments out this item
+				"inRootDir": string-path, // optional, defaults to project root dir (see below)
+				"inFiles": [ ...strings-file-globs ], // mandatory, must be relative to the dir specified in inRootDir
+				"excludeInFiles": [ ...strings-file-globs ], // optional, must be relative to the dir specified in inRootDir
+				"forLPInclude": bool, // optional, defaults to false
+				"outDir": string-path, // mandatory
+				"reader": string-path, // mandatory
+				... // no other parameters recognized by Logipard and are extra, the reader can require its own specific parameters
+			},
+			... // zero, one or more items
+		]
+	},
+	// mandatory, configuration for compile stage
+	"lp-compile": {
+		// optional
+		"+ config": {
+			...
+		},
+		// mandatory
+		"items": [
+			{
+				"SKIP": bool, // optional, non-false value comments out this item
+				"inRootDir": string-path, // mandatory, 
+				"outFile": string-path,
+				"writer": string-path,
+			},
+			... // zero, one or more items
+		]
+	},
+	// mandatory, configuration for generate stage
+	"lp-generate": {
+		// optional
+		"+ config": {
+		},
+		// mandatory
+		"items": [
+			{
+				"SKIP": bool, // optional, non-false value comments out this item
+				"inFile": string-path,
+				"writer": string-path,
+				...
+			},
+			... // zero, one or more items
+		]
+	}
+}
+```
+The config file also works as an anchor for the _project root_ directory. It is the directory the config file is placed in. All relative files and directory paths
+are assumed relative to the project root, unless stated otherwise.
+
+The given set of members is the bare minimum, which are recognized by Logipard itself. However, there can be additional ones - user tools can make use of them.
+The configuration unit passed to a tool is based off an object from a single entry from `"items"`, but it is also merged with object `"+ config"`
+from the corresponding tool's stage, and additionally merged with `"+ config"` from the root level (in the order global "+ config" -> stage "+ config" -> item). The merging is shallow per-member
+appending at the object's root level. If case of member name collision, the latter object member replaces the former object's member. However, there is a way to override this behaviour
+for array or an object type member: if the member's expected name is `"id"`, then add member named `"+ id"` to the `"+ config"`(s) - then, the resulting "id" member will contain the sub-members
+from `"+ id"` from the `"+ config"` appended before the ones given by the item's `"id"`.
+
+I. e.:
+```
+{
+	"+ config": {
+		...
+		"a": [1, 2],
+		"+ b": [3, 4],
+		"c": [5, 6],
+		"+ d": [7, 8],
+		...
+	},
+	"lp-...": {
+		"+ config": {
+			...
+			"a": [9, 10],
+			"b": [11, 12],
+			"+ c": [13, 14],
+			"+ d": [15, 16],
+			...
+		},
+		"items": [
+			...
+			{
+				// "a", "b", "c", "d" are unspecified, in the actual config item they will be:
+				// "a": [9, 10]
+				// "b": [3, 4, 11, 12]
+				// "c": [13, 14]
+				// "d": [7, 8, 15, 16]
+			},
+			{
+				...
+				"a": ["A", "B"], // actual "a": ["A", "B"]
+				"b": ["A", "B"], // actual "b": ["A", "B"]
+				"c": ["A", "B"], // actual "c": [13, 14, "A", "B"]
+				"d": ["A", "B"], // actual "d": [7, 8, 15, 16, "A", "B"]
+				...
+			}
+		]
+	}
+}
+```
+
+#LP ./members %struct {
+<#./%title: Configuration file members#>
+
+#LP ./"+ config" %member {
+Configuration parameters shared by all the job items in all the stages. Appended to each item specific configuration before the item's own configuration and the stage specific `"+ config"`.
+#LP } "+ config"
+
+#LP ./lp-extract %member {
+Configuration parameters for the job items in the extract stage.
+	#LP ./"+ config" %member {
+	Configuration items shared by all the job items in the extract stage. Appended to each item specific configuration before the item's own configuration, and after the global <#ref lp-config.json/members/"+ config"#>.
+	#LP } "+ config"
+
+	#LP ./items[] %member {
+	Array of configurations specifying each job item in the extract stage.
+		#LP ./SKIP %member: Bool. Non-false value tells Logipard to skip this item. Use to comment out temporarily disabled items. Optional, defaults to false.
+		#LP ./inRootDir %member: Root directory for input files lookup, defaults to project root dir.
+		#LP ./inFiles %member: A string, or array of strings, with glob filename templates - specifies the set of input files that fall under this item.
+		The paths in templates are relative to the <#ref items[]/inRootDir#>.
+		#LP ./excludeInFiles %member: A string, or array of strings, with glob filename templates - specifies the set of files to exclude from <#ref items[]/inFiles#>.
+		The paths in templates are relative to the <#ref items[]/inRootDir#>. Optional.
+		#LP ./outDir %member: A string, path to the directory where the extracted documentation model input will be placed. The extraction output directory is assumed transient and should be added to VCS ignore list.
+		Note that same source file can be picked by multiple extraction job items, but if its extracted input from different jobs ends up under same `outDir`-s then later jobs will overwrite product of earlier ones -
+		you should consider this ahead and take care their output locations did not conflict.
+		#LP ./forLPInclude %member: Boolean, if true then input extractions by this job item will be saved as module files eligible for inclusion via `LP-inc`/`LP-include`
+		(see <#ref domain.logipard/lpinput/include#>). Optional, defaults to false.
+		
+		Typically the root is the same for all items of the same project,
+		but different item groups can go under different subdirectories, e. g. you may want to specify \<root\>/src for extractions from source code files and \<root\>/txt for extractions from text files.		
+		#LP ./reader %member { String. Path to the extraction reader's JS file, relative to project root (unless absolute).
+		The extraction reader is expected to comply with <#ref M/interfaces/extract/reader#>. Logipard contains some built-in extraction readers: <#ref ./builtin-readers#>
+			#LP ./builtin-readers { <#./%title: Built-in extraction readers#>
+			Some ready-to-use extraction readers, come in Logipard package both as a quickstart boilerplate and as examples.
+			#-LP (see the corresponding readers source files for this section's content)
+			#LP } builtin-readers
+		#LP } reader
+	#LP } items[]
+#LP } lp-extract
+
+#LP ./lp-compile %member {
+Configuration parameters for the job items in the compile stage.
+	#LP ./"+ config" %member {
+	Configuration items shared by all the job items in the compile stage. Appended to each item specific configuration before the item's own configuration, and after the global <#ref lp-config.json/members/"+ config"#>.
+	#LP } "+ config"
+
+	#LP ./items[] %member {
+	Array of configurations specifying each job item in the compile stage.
+		#LP ./SKIP %member: Bool. Non-false value tells Logipard to skip this item. Use to comment out temporarily disabled items. Optional, defaults to false.
+		#LP ./inRootDir %member: Path to the root directory of the model input extracted at the extract stage. In most cases, root is the same as <#ref lp-config.json/members/lp-extract/items[]/outDir#>.
+		#LP ./lpIncLookupDirName %member {
+		Name for directory to use for cascading LP-inc/LP-include lookup.
+
+		When using <#~~`<#LP-include filename#>`~~#> in a LP input file, where `filename` is non-absolute and not explicitly local (i. e. is not starting from `.` or `..`), then lookup is done as `./<value-of-lpIncLookupDirName>/filename`,
+		if not found there then as `../<value-of-lpIncLookupDirName>/filename`, etc. upwards (but not higher than inRootDir).
+		#LP } lpIncLookupDirName
+		#LP ./writer %member { String. Path to the compilation model writer's JS.
+		The compilation writer is expected to comply with <#ref M/interfaces/compile/writer#>.
+		Logipard contains some built-in compilation writers: <#ref ./builtin-writers#>
+			#LP ./builtin-writers { <#./%title: Built-in compiled model writers#>
+				Some ready-to-use compiled model writers, come in Logipard package both as a quickstart boilerplate and as examples.
+
+				#LP ./lpcwrite-basic-json: <#./%title: ${LP_HOME}/lpcwrite-basic-json: Writer of FDOM into JSON file#>
+				Writer of model into a JSON file with the schema as given below. The writer keeps the whole intermediate model in the memory, and writes it back in one whole lump,
+				so may be not suitable for really massive amounts of documentation and/or with very frequent updates.
+
+				See description of the produced JSON schema, writer configuration, and usage details: <#ref M/interfaces/lpcwrite-basic-json#>
+			#LP } builtin-writers
+		#LP } writer
+	#LP } items[]
+#LP } lp-compile
+
+#LP ./lp-generate %member {
+Configuration parameters for the job items in the generate stage.
+	#LP ./"+ config" %member {
+	Configuration items shared by all the job items in the generate stage. Appended to each item specific configuration before the item's own configuration, and after the global <#ref lp-config.json/members/"+ config"#>.
+	#LP } "+ config"
+
+	#LP ./items[] %member {
+	Array of configurations specifying each job item in the generate stage.
+		#LP ./SKIP %member: Bool. Non-false value tells Logipard to skip this item. Use to comment out temporarily disabled items. Optional, defaults to false.
+		#-LP ./inFile %member: Path to the root directory of the model input extracted at the extract stage. In most cases, root is the same as <#ref lp-config.json/members/lp-extract/items[]/outDir#>.
+		#LP ./writer %member { String. Path to the generation writer's (generator's) JS.
+		The generation writer is expected to comply with <#ref M/interfaces/generate/writer#>.
+		Logipard contains some built-in generation writers: <#ref ./builtin-writers#>
+			#LP ./builtin-writers { <#./%title: Built-in generation writers#>
+				Some ready-to-use generation writers, come in Logipard package both as a quickstart boilerplate and as examples.
+
+			#LP } builtin-writers
+		#LP } writer
+	#LP } items[]
+#LP } lp-generate
+
+#LP } members
+
+#LP } lp-config.json

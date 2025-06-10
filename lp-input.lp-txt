@@ -1,0 +1,553 @@
+#LP-include lp-module-inc.lp-txt
+#-LP (Note: in lp-txt, LP-include tag should be followed by #-LP or #LP:, as there is no way to break contiguity of tag block in the plain-text mode.)
+
+#LP M/lpinput { <#./%title: Logipard Input File Format#>
+A certain file format that extraction readers must pre-compile the extracted input into. Along with FDOM, it is one of the few items that Logipard stipulates.
+
+It's worth to note that it only applies to product of the extraction readers, not to actual user-facing source files they read. Logipard's builtin
+<#ref M/lp-config.json/members/lp-extract/items[]/reader/builtin-readers/lpxread-basic#> is a quite thin wrapper over the input format, but an extraction reader does not have
+to consume a source as simple as that. For example, it is an ok problem statement to create an extraction reader that translates javadoc comments into Logipard input compliant form.
+
+The input is split into a set of files corresponding to the input source files, preserving their folder structure and naming where possible (the `.lpinput` extension is appended to the original names),
+into a directory specified by <#ref M/lp-config.json/members/lp-extract/items[]/outDir#> in the extract job item.
+
+#LP lpinput/general { <#./%title: General format#> <#./%order: 1#>
+
+The LP input file is UTF-8 text file with **markup tags** of the format <#~~`<#tag-name ... #>`~~#> (tag name is alphanumeric with allowed `-`'s). Tags can be nested. Aside from tag components, the rest
+text format (plaintext, Markdown, HTML, or whatever) is opaque from LP input perspective, its interpretation is up to compilation and generation stages.
+
+A typical piece of input can look like this:
+<#~~
+```
+<#LP ./dataStruct { <#./%title: FDOM data structure#> <#./%order: 1#>
+The FDOM data structure explanation starts best with a visual example...
+
+<#img ./lp-model.png #>
+
+The model data consists of *nodes*. 
+- blah
+- blah blah
+
+blah blah blah (see: <#ref dataStruct/parent-member#>, <#ref dataStruct/tagged-tag#> ).
+
+blah blah total of 11 nodes.#>
+```
+~~#>
+
+It is possible to escape fragments of text by using <#~~`<#~delimiter~ ... ~delimiter~#>`~~#> boundaries. Delimiter is a sequence of any non-`~` characters, including empty, and it must match
+for escape starting and finishing boundary. Everything between the boundaries is taken as verbatim plain text:
+<#~delimiterr~
+```
+<#this-is-tag
+	this is content data
+	<#this-is-tag-too and this is content data too#>
+	<#~~
+	This is all plain text, <#even-this#>
+	~~#>
+
+	This is again content data <#and-a-tag#>
+
+	<#~a~
+	This is again plain text again, <#~~ and even this ~~#>
+	~a~#>
+#>
+```
+~delimiterr~#>
+
+Markup tag names can start from `-` (it is also possible to write <#~~`<-#tag-name ... #>`~~#>) - these are assumed commented-out and do not have any effect on content and FDOM, although
+they still have to be of consistent format (correctly closed tags and escapes).
+<#~~
+```
+this is data <#with-markup-tag inside#>
+and this is <-#dropped-tag#> data with no markup tag <#-this-is-dropped-tag-either and this <#is-not#>, but is ignored as inside of a dropped one#> really
+```
+~~#>
+is the same as:
+<#~~
+```
+this is data <#with-markup-tag inside#>
+and this is  data with no markup tag  really
+```
+~~#>
+
+The markup tag names starting with `LP`, including actually <#~~`<#LP ...#>`~~#> are reserved for Logipard content feed and directives (these names are case-insensitive). Additionally, <#~~`<# ... #>`~~#>
+is treated as shortcut to <#~~`<#LP ...#>`~~#>. Also a reserved tag is <#~~`<#ref ...#>`~~#> (for Logipard item linking, see below), this name is also case-insensitive. All other tags are called **custom tags**,
+and their handling is up to compile model writer at <#ref M/stages/compile-stage#>. Their names MAY be case-sensitive, depending on the model writer implementation.
+
+#LP } <-#general#>
+
+#LP lpinput/content-feed { <#./%title: Content feed#> <#./%order: 2#>
+
+Logipard content feed is designed as tag <#~~`<#LP itemName: ...content... #>`~~#> or <#~~`<# itemName: ...content...#>`~~#> Item name can be followed by names of FDOM tags, optionally starting from `#`:
+<#~~`<#LP itemName tagItemName1 tagItemName2 ...: ...#>`~~#>, <#~~`<#LP itemName #tagItemName1 tagItemName2 ...: ...#>`~~#>, <#~~`<#LP itemName #tagItemName1 #tagItemname2 ...: ...#>`~~#>.
+
+The content feed basically instructs to add the piece of content and attach the said FDOM tags to the item with given name. An input file is basically a number of content feeds.
+
+The content feeds can go in sequence:
+<#~~
+```
+<#LP A: this goes to item A#>
+<#LP B: this goes to item B#>
+<#LP C: this goes to item C#>
+<#LP D %tagDWithThis#> <-# if there is no content, just FDOM tags added, use of `:` is optional#>
+<#LP A: this goes to item A
+It is absolutely ok to make multiple feeds into the same item, content from them is appended. It is ok to do this even from different input files,
+but then you should keep in mind that the order in which the input files are processed is not guaranteed.
+#>
+```
+~~#>
+
+or be nested:
+<#~~
+```
+<#LP Outer: this goes to item Outer
+	<#LP Inner: this goes to item Inner#>
+	this again goes to item Outer
+#>
+```
+~~#>
+
+The nested content feed is called **[scope] digression** (as a temporary digression from the 'current' item).
+
+The scope digression can be made **lingering** by using `{` for delimiter instead of `:`. In this case, even after the digression finishes, the current scope remains until lingering digression closer tag
+is encountered:
+
+<#~~
+```
+<#LP A:	this goes to A
+	<#LP B { this goes to B#>
+	this still goes to B
+	<#LP }
+	this goes to A (note that, if closer contains a remainder content, then a line break or a markup tag, at least <-# comment#>, after `}`, is essential) #>
+	this goes to A
+
+	<#LP C/D { this goes to C/D#>
+	<#LP E { lingering digressions can be nested#>
+	this goes to E
+	<#LP } #>
+	this goes to C/D
+	<#LP } #>
+	this goes to A
+#>
+```
+~~#>
+
+#LP } <-#content-feed#>
+
+#LP lpinput/name-resolution { <#./%title: FDOM item and tag names resolution#> <#./%order: 3#>
+
+The item/tag name specified in content feed ultimately resolves to a full FDOM name (see <#ref M/model/dataStruct/parent-member#>). But using literal full names everywhere would be utterly impractical,
+so the names you deal with inside the LP markup tags are treated as partial (shortcuts), relying on variety on a number resolution rules.
+
+**Current item**
+
+The current item can be referred by a single dot ("current dir") as the starting name segment. It can be used as fragment of a name.
+
+<#~~
+```
+<#LP A: this goes to A
+	<#LP.: this goes to A too#>
+#>
+<#LP B/C: this goes to B/C
+	<#LP.: this goes to B/C too#>
+	Doesn't make much sense to add content this way, but adding a tag is a reasonable use case:
+	<#LP . %tag"B/C"WithThis #>
+#>
+<#LP D/E/F: this goes to D/E/F
+	<#LP D/E/F/G: this goes to D/E/F/G#>
+	this goes to D/E/F
+	<#LP ./G: this goes to D/E/F/G again#>
+#>
+```
+~~#>
+
+Single dot can be omitted at all:
+<#~~
+```
+<#LP A
+	<#LP: this is in A (same as <#LP#>) #>
+#>
+```
+~~#>
+
+If you intend to combine this syntax with adding tags, you will have to use `#` prefix:
+
+<#~~
+```
+<#LP #%tagToCurrentItem#>
+```
+~~#>
+
+**Up-directory shortcuts**
+
+Using `..`, `...` and so on ("up dir") starting segments refers to one, two, etc. levels above the current name level:
+<#~~
+```
+<#LP D/E/F/G: this goes to D/E/F/G
+	<#LP ..: this goes to D/E/F#>
+	<#LP ...: this goes to D/E#>
+	<#LP ....: this goes to D#>
+	<#LP .....: this goes to root item#>
+#>
+On that note, the input file content feeds are digressions in root item scope.
+You technically can add content to root item scope, but it is quite meaningless and a bad style.
+```
+~~#>
+
+If the up-dir segment exhausts the levels of the current scope, but there is an outer nesting scope, it starts borrowing from there, then from next outer scope, etc.
+<#~~
+```
+<#LP A/B
+	<#LP C/D {#>
+		<#LP ..: this is in C#>
+		<#LP ...: it might be in root, but there is outer scope to borrow from, so it is in A/B #>
+		<#LP ....: it is in A #>
+		<#LP .....: and only this is in root #>
+	This is again in C/D
+	<#LP } #>
+	This is again in A/B
+#>
+```
+~~#>
+
+Current-dir and up-dir names can be used as middle names, although it is quite a peculiar use case:
+<#~~
+```
+<#LP A/B
+	<#LP ./C/D/..: . is A/B, ./C/D is A/B/C/D, ./C/D/.. is A/B/C, so in the end it is A/B/C #>
+#>
+```
+~~#>
+
+**Outer scope name shortcuts**
+
+If the initial name segment is not current-dir nor an up-dir, it does not necessarily mean a first-level segment shortname. The currently open scopes are looked up first, from current to outward,
+and if a match is found, that is taken as a starting scope.
+
+<#~~
+```
+<#LP A:
+	<#LP B/C: this is B/C (not A/B/C !)
+		<#LP D: this is indeed D#>
+		<#LP C: this is B/C#>
+		<#LP B: this is B#>
+		<#LP A: B level is exhausted, but then there is A, so it is A#>
+	#>
+#>
+```
+~~#>
+
+Name resolution rules apply to names of the opening content feed item, tags and refrenced items:
+
+<#~~
+```
+<#LP A/B/C
+	<#LP ./%tag: it is A/B/C/%tag #>
+	<#LP A C/%tag: we are in A and tag it by A/B/C/%tag
+		<#ref ./B#> - reference to A/B
+	#>
+#>
+```
+~~#>
+Note that for opening item name and its tags the scope in effect is still the outer scope, while for refs and digressions inside it is the digression item's scope.
+
+**Lingering digression closers with names**
+
+A lingering digression closer it normally closes the whole digression as it was opened:
+
+<#~~
+```
+<#LP A:
+	<#LP B/C { #>
+	This goes to B/C
+	<#LP } #> <-#closes B/C#>
+	This goes to A
+#>
+```
+~~#>
+
+But it is possible to specify a short name to designate the sub-level to close - it will be first one that matches the name:
+
+<#~~
+```
+<#LP A:
+	<#LP B/C/D { #>
+	This goes to B/C/D
+	<#LP } C #> <-#closes C, but leaves B (note the short name is on same line as `}`) #>
+	This goes to B
+	<#LP } #> <-# closes "remaining" part of the digression, which is B (we could also use <#LP } B#> with the same effect)#>
+	This goes to A
+#>
+```
+~~#>
+
+Instead of closing the named level, you can specify to stay at that level by appending a `.` segement:
+
+<#~~
+```
+<#LP A:
+	<#LP B/C/D { #>
+	This goes to B/C/D
+	<#LP } C/. #>
+	This goes to B/C (would go to B if we used "} C")
+	<#LP } #>
+	Again to A
+#>
+```
+~~#>
+
+The "borrow outwards on levels exhaustion" rule works as well:
+
+<#~~
+```
+<#LP A:
+	<#LP B/C { #>
+	<#LP D/E { #>
+	this goes to D/E
+	<#LP } E #>
+	this goes to D
+	<#LP } B #>
+	closed remaining D and the B/C, this goes to A
+#>
+```
+~~#>
+
+but with one important caveat: you can only pop through levels open with lingering digression. Current non-lingering ones digressions form **digression fence** that bars the closer's way outward.
+
+<#~~
+```
+<#LP A:
+	<#LP B/C { #>
+	<#LP D/E:
+	this goes to D/E, but note that "D/E" is open as non-lingering digression, and we are still within it
+	THE FOLLOWING IS INCORRECT: <#LP } E #>
+	Using "} D" or "} B" or "} C" or "} A" here is disallowed as well, as they pop through still-effective D/E.
+	#>
+	<#LP } B #>
+
+	<#LP F/G {
+	The same applies to inside of the lingering digression opener until it is finished.
+	That is, the following is incorrect: <#LP } F #>
+	#>
+	but here, as the lingering digression opening is done, the following one is ok:
+	<#LP } F #>
+#>
+```
+~~#>
+
+This is a safeguard to make the syntax more resilient against unintentional loss of scope consistency.
+
+**Scope tracing**
+
+The name resolution rules are designed to behave in 'least-surprise' way, and should go quite intuitive with reading and writing. Nevertheless, in a questionable case you can insert
+<#~~`<#LP-TRACE-WHERE [optional label]#>`~~#> inline markup tag which will print the current scope in the location it is placed, along with optionally provided label and explanation of the name resolution.
+
+The name resolution rules are in effect for name and tag specification in content feed headers, macro/alias specification (<#ref lpinput/macro#>, <#ref lpinput/alias#>), inline references (<#ref lpinput/ref#>)
+and inverse tagging (<#ref lpinput/tag-on#>).
+
+#LP } <-#name-resolution#>
+
+#LP lpinput/ref { <#./%title: Inline references#> <#./%order: 4#>
+
+Inline references to FDOM items are specified via <#~~`<#REF item/name#>`~~#> markup tag. The name specification obeys naming resolution rules (<#ref lpinput/name-resolution#>).
+References are supported at FDOM compilation stage on a built-in basis - FDOM user, such as generator, does not have to invent a custom tag for them.
+
+It is possible to explicitly specify an "alt" text for the reference:
+<#~~
+```
+This is <#ref item/name: a link to item/name with alt text#>
+```
+~~#>
+
+Unspecified alt text is assumed empty. In fact, interpretation of alt text (or absence thereof) is up to FDOM user, such as a generator.
+
+#LP } <-#ref#>
+
+#LP lpinput/tag-on { <#./%title: Tagging and reverse tagging#> <#./%order: 5#>
+
+Adding FDOM tag(s) is done along with digression opening (<#~~`<# name tag1 tag2 ...: ...content...#>`~~#>), or, if adding to a currently scoped item, later in an auxiliaty sub-digression (<#~~`<#. tag1 tag2 ...#>`~~#>).
+But it also is possible to do the reverse thing - add the currenly scoped item as FDOM tag to some other item: <#~~`<#LP-TAG-TO other-item-name#>`~~#>.
+
+#LP } <-#tag-on#>
+
+#LP lpinput/include { <#./%title: Including module files#> <#./%order: 6#>
+
+You can include an input file like if its content was typed inline. This file is called **module [input] file**.
+<#~~
+```
+<#LP-INCLUDE lp-module-inc.lp-txt#>
+or shorter...
+<#LP-INC lp-module-inc.lp-txt#>
+note that you specify only the file's original extension, no .lpinput suffix
+```
+~~#>
+
+Extractions from the module input files are a bit different from "main" input files: they have `.lpinput-inc` name suffix instead of `.lpinput` and are not picked automatically at compilation stage, as they are
+are assumed only parts of "main" files to be included manually. You can't include other "main" files (but it is possible to include an module file from another module file).
+
+Preparation of module files is typically done in separate extract job items, which have <#ref M/lp-config.json/members/lp-extract/items[]/forLPInclude#> flag set to true. It is also adviced to keep
+the module files under dedicated subdirectory (for example, if <#ref M/lp-config.json/members/lp-extract/items[]/outDir#> for main files is `"lp-extract.gen"`, then for module files it can be like
+`"lp-extract.gen/lp-includes"`. This is for a good reason. Later, at compile stage, when handling <#~~`<#LP-inc[lude] file-name#>`~~#> directives, the `file-name` is interpreted in the following way:
+- if it starts from `.` or `..`, then it is path relative to directory of the processed input file (i. e. of one that contains the <#~~`<#LP-INCLUDE#>`~~#>) - but this is quite a rare use case,
+- otherwise, it tries to look for `<includes-dir>/file-name[.lpinput-inc]` via cascading lookup, that is, starting from directory of the processed input file, if not found there - then
+in its `../<includes-dir>/file-name[.lpinput-inc]`, then `../../<includes-dir>/file-name[.lpinput-inc]`, and so on, until found or reached `<extracted-input-root>` directory. That is, the strategy similar
+to what Node.JS does on `require(filename)`. This is the recommended method of arranging and using module files.
+For example, you can place a module file as a `<extracted-input-root>/<includes-dir>/common.lp-txt[.lpinput-inc]`, and then include it with <#~~`<#LP-INCLUDE common.lp-txt#>`~~#> from any input file
+under `<extracted-input-root>/**`.
+
+Note that at extraction stage you can specify the `outDir`-s much as you like, but you should take care to have them matching directories that will be `<extracted-input-root>` and `<includes-dir>` at compilation
+stage (these are specified by <#ref M/lp-config.json/members/lp-compile/items[]/inRootDir#> and <#ref M/lp-config.json/members/lp-compile/items[]/lpIncLookupDirName#>, respectively). If multiple extract jobs
+are targeting the same compile job, then their `outDir`-s must be consistent with the compile job's `inRootDir` and `lpIncLookupDirName`.
+
+Module files typically contain macro and alias definitions rather than actual immediate content.
+
+#LP } <-#include#>
+
+#LP lpinput/alias { <#./%title: Name aliasing#> <#./%order: 7#>
+
+Names can be aliased. It can be convenient for giving more convenient aliases to longer names (like `M` for the next-to-root domain item name), or to quickly move FDOM fragments to other actual locations
+without changing the sources. Syntax for alias definition is: <#~~`<#LP-ALIAS new-name: old-name#>`~~#> After that, `new-name` will become an alias to `old-name` (the `old-name` can still be used on its own).
+
+Some rules to remember regarding aliases:
+1. The alias is only in effect at compile-time and only for that specific input file (that spans to <#~~`<#LP-INCLUDE ...#>`~~#>-d fragments, but on per-include basis, not per the module file as is).
+There is no concept of aliasing in FDOM, and in the actual compiled output all the names go resolved.
+
+2. Alias resolution is in effect for name starting parts, but is done after applying name resolution rules. That is:
+<#~~
+```
+<#LP-ALIAS A/B: C#>
+<#LP A/B: this goes to C: A/B #>
+<#LP A/B/D: this goes to C/D, because starting part A/B aliases C#>
+but:
+<#LP A/B/../D: this goes to A/D, because A/B/../D resolves to A/D, and A is not aliased #>
+
+also:
+<#LP A: this goes to A
+	<#LP ./B: this goes to C, because effective resolved name is A/B, which is aliased#>
+#>
+```
+~~#>
+The resolved name prior to application of alias is also called **literal name**, and is referred so in <#~~`<#LP-TRACE-WHERE#>`~~#> output.
+
+3. Alias can be redefined - the redefinition comes into effect in the input stream order:
+<#~~
+```
+<#LP-ALIAS A/B: C#>
+<#LP A/B: this goes to C#>
+<#LP-ALIAS A/B: D#>
+<#LP A/B: this goes to D#>
+```
+~~#>
+Be careful however, that specification of the redefined alias only spans to the last name segment, and can be affected by aliasing of the ones that precede it:
+<#~~
+```
+<#LP-ALIAS A: B#>
+<#LP-ALIAS A/C: D#> A/C and B/C refer to D (here A is literal aliased name, B is unaliased actual name)
+<#LP-ALIAS A/C/E: F#> A/C/E and B/C/E refer to D/E
+<#LP-ALIAS A: G#>
+<#LP-ALIAS A/C: H#> A/C and G/C now refer to H, A/C/E refers to H/E, B/C still refers to D!
+The actual items at this point are B, D, D/E, F, G
+```
+~~#>
+You can consider alias definition as creating a symbolic link in the items namespace 'directory', working in similar logic.
+
+4. If an actual name (directly or via an alias) was used in the current input file in one of the following ways:
+- as FDOM tag or tag target,
+- had any content added under it,
+- used as effective name for macro (<#ref lpinput/macro#>) or alias name,
+- was target of a <#~~`<#ref ...#>`~~#>,
+- used as intermediate path component for any of the above,
+
+then it can no longer be used for alias in the current input file:
+<#~~
+```
+<#LP A/B: some content#>
+<#LP-ALIAS A/B: C#> this will be ignored and flag a warning
+<#LP-ALIAS A: D#> and this too
+the restriction doesn't affect unused names under A/B though:
+<#LP-ALIAS A/B/C: C#>
+and the A/B itself still can be alias target:
+<#LP-ALIAS E: A/B#>
+<#LP E: this goes to A/B#>
+<#LP-ALIAS E: C#> E can be redefined, since it is an alias from the very beginning
+```
+~~#>
+Note that in the example above, after definition of `E` as of an alias, it is no longer possible to use/refer an item with actual `E` name, or any of its sub-items, in this input file -
+`E` always refers to an item currently aliased by `E`. So this restriction is introduced to prevent confusing interference between aliases and actual names.
+
+#LP } <-#alias#>
+
+#LP lpinput/macro { <#./%title: Macros#> <#./%order: 8#>
+
+You can define some node names as macros to add predefined set of tags and content into arbitrary nodes by adding the macro pseudo-nodes as tags or digressions.
+<#~~
+```
+<#LP-MACRO Mac %tag1 %tag2: macro-content#>
+```
+~~#>
+Adding the macro as a tag to a node is the same as adding the set of tags and the content in place, at start of the "tagged" node:
+<#~~
+```
+<#LP test-node Mac: test content#>
+the same as:
+<#LP test-node %tag1 %tag2: macro-content test content#>
+```
+~~#>
+or:
+<#~~
+```
+<#LP test-node: test content <#. Mac#> other test content #>
+the same as:
+<#LP test-node: test content <#. %tag1 %tag2: macro-content#> other test content #>
+```
+~~#>
+or use a macro directly inline, which is the same as using it as a tag (i. e. expanding macro content at start of the containing node):
+<#~~
+```
+<#LP test-node: test content <#Mac#>#>
+the same as:
+<#LP test-node %tag1 %tag2: macro-content test content#>
+```
+~~#>
+Several macros are expanded in the order of usage (it matters for content adding ones).
+
+Macros can contain arbitrary LP markup tags:
+<#~~
+```
+<#LP-MACRO %is-a-class %class: <#LP-TAG-ON classes#> <#LP ./%title: Class title: #> #>
+...
+<#LP ClassA %class: this is class A, and we added it to <#ref classes#> by using a macro
+	<#./%title: A#> <-#it will result in %title = "Class title: A"#>
+#>
+```
+~~#>
+Technically you can even use `LP-ALIAS` or even other `LP-MACRO`, although it generally doesn't make much sense, and you should be careful with these if you decide to use them after all.
+Keep in mind that the name scope inside the macro (i. e. where <#~~`<# . #>`~~#> refers, or where name resolution lookup starts) is the node where it is being inserted, not the macro itself.
+<#~~
+```
+<#LP-MACRO where-am-I: <#LP-TRACE-WHERE#>#>
+<#LP A where-am-I: inside A#>
+<#LP B where-am-I: inside B#>
+```
+~~#>
+
+Similarly to `LP-ALIAS` (<#ref lpinput/alias#>), you can't define macro under same effective full name that has been used in the current input file in one of the following ways:
+- as FDOM tag or tag target,
+- had any content added under it,
+- used as effective name for macro or alias name,
+- was target of a <#~~`<#ref ...#>`~~#>,
+- used as intermediate path component for any of the above,
+
+Additionally, it is not correct to use an effective full name that refers to macro as initial path for any sub-nodes:
+<#~~
+```
+<#LP-MACRO Mac: macro content#>
+<#LP Mac/I: may not work as you expect#>
+```
+~~#>
+
+Similarly to aliases, macros are only in effect at compile time of particular input file - they all go resolved to the actual FDOM output.
+
+#LP } <-#macro#>
+
+#LP } <-#lpinput#>

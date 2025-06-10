@@ -1,0 +1,281 @@
+[
+	...vars.docprgPrologue (= []),
+	{ queryAlias: "QStructMembers", query: [{ membersThat: { hasAnyOfTags: ["%member", "%.member"] }}]},
+	{ queryAlias: "QArgs", query: [{ membersThat: { hasAnyOfTags: ["%arg", "%.arg"] }}]},
+	{ queryAlias: "QMethods", query: [{ membersThat: { hasAnyOfTags: ["%method", "%.method"] }}]},
+	{ queryAlias: "QProperties", query: [{ membersThat: { hasAnyOfTags: ["%property", "%.property"] }}]},
+	{ queryAlias: "QReturn", query: [{ membersThat: { named: "^%return$" }}]},
+	{ queryAlias: "QErrors", query: [{ membersThat: { named: "^%errors$" }}]},
+	{ queryAlias: "QExtends", query: [{ inMembersThat: { named: "^%extends$" }, recursive: true, query: { tagsThat: true }}]},
+	{ conditionAlias: "?Private", condition: { named: "^(%|#)" }},
+	{ conditionAlias: "?Detail", condition: { hasAnyOfTags: ["%arg", "%.arg", "%member", "%.member", "%method", "%.method", "%property", "%.property"] }},
+	{ conditionAlias: "?ForTOC", condition: { hasAnyOfTags: ["%for-toc", "%.for-toc"] }},
+	{ queryAlias: "QOtherMembers", query: [
+		{ alias: "Self" },
+		{ membersThat: true },
+		{ subtractQuery: [{ with: "Self" }, "QStructMembers"] },
+		{ subtractQuery: [{ with: "Self" }, "QMethods"] },
+		{ subtractQuery: [{ with: "Self" }, "QProperties"] },
+		{ subtractQuery: [{ with: "Self" }, "QArgs"] },
+		{ subtractQuery: [{ with: "Self" }, "QReturn"] },
+		{ subtractQuery: [{ with: "Self" }, "QErrors"] },
+		{ subtractQuery: [{ with: "Self" }, { membersThat: "?Private" }] }
+		]},
+	{ queryAlias: "QLinked", query: [
+		{ alias: "Self" },
+		{ membersThat: { named: "^%link$" }},
+		{ tagsThat: true }
+		]},
+	{
+		docModel: {
+			name: "DocMain",
+			rootItems: vars.docRootItems
+		},
+		forEachItem: [
+			{ ifCondition: { or: [{ and: [{ not: "?Private" }, { not: "?Detail" }] }, "?ForTOC"] },
+				then: [
+					"%%mark-for-toc"
+				]
+			},
+			"%%brief",
+			{ on: "%%self", query: ["QExtends"], as: "Extends" },
+			{
+				ifNotEmpty: "Extends",
+				then: [
+					{
+						section: "#text:${LS_EXTENDS}" $ (= { LS_EXTENDS: "[D]Extends (is a)" }),
+						content: [
+						{ with: "Extends",
+							emitAsItemsList: ["#item:%%refTitle"]
+						}]
+					}
+				]
+			},
+			{ on: "%%self", query: ["QStructMembers"], as: "StructMembers" },
+			{
+				ifNotEmpty: "StructMembers",
+				then: [
+					{
+						section: "#text:${LS_MEMBERS}" $ (= { LS_MEMBERS: "[D]Members" }),
+						content: [
+						{ with: "StructMembers",
+							sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+							emitAsItemsTable: [
+								["#text:${LS_NAME}" $ (= { LS_NAME: "[D]Name" }), "#item:%%refTitle"],
+								["#text:${LS_DESCRIPTION}" $ (= { LS_DESCRIPTION: "[D]Description" }), "#item:%%brief"]
+							]
+						}]
+					}
+				]
+			},
+			{ on: "Extends", query: ["QStructMembers"], as: "ExtentStructMembers" },
+			{
+				ifNotEmpty: "ExtentStructMembers",
+				then: [
+					{
+						section: "#text:${LS_MEMBERS_FROM_EXTENTS}" $ (= { "LS_MEMBERS_FROM_EXTENTS": "[D]Members from extents" }),
+						content: [
+						{ with: "ExtentStructMembers",
+							sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+							emitAsItemsTable: [
+								["#text:${LS_NAME}" $ (= { LS_NAME: "[D]Name" }), "#item:%%refTitle"],
+								["#text:${LS_DESCRIPTION}" $ (= { LS_DESCRIPTION: "[D]Description" }), "#item:%%brief"]
+							]
+						}]
+					}
+				]
+			},
+			{ on: "%%self", query: ["QArgs"], as: "Args" },
+			{
+				ifNotEmpty: "Args",
+				then: [
+					{
+						section: "#text:${LS_ARGUMENTS}" $ (= { LS_ARGUMENTS: "[D]Arguments" }),
+						content: [
+						{ with: "Args",
+							sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+							emitAsItemsTable: [
+								["#text:${LS_NAME}" $ (= { "LS_NAME": "[D]Name" }), "#item:%%refTitle"],
+								["#text:${LS_DESCRIPTION}" $ (= { "LS_DESCRIPTION": "[D]Description" }), "#item:%%brief"]
+							]
+						}]
+					}
+				]
+			},
+			{ on: "%%self", query: ["QReturn"], as: "Return" },
+			{
+				ifNotEmpty: "Return",
+				then: [
+					{
+						section: "#text:${LS_RETURNS}" $ (= { LS_RETURNS: "[D]Returns:" }),
+						content: [
+						{ with: "Return",
+							emitAsOwnItems: "basic"
+						}]
+					}
+				]
+			},
+			{ on: "%%self", query: ["QErrors"], as: "Errors" },
+			{
+				ifNotEmpty: "Errors",
+				then: [
+					{
+						section: "#text:${LS_ERRORS}" $ (= { LS_ERRORS: "[D]Errors:" }),
+						content: [
+						{ with: "Errors",
+							emitAsOwnItems: "basic"
+						}]
+					}
+				]
+			},
+			"%%more-start",
+			"%%debrief",
+			{
+				ifNotEmpty: "StructMembers",
+				then: [
+					{
+						section: "#text:${LS_MEMBERS_DETAILED}" $ (= { LS_MEMBERS_DETAILED: "[D]Members (detailed)" }),
+						content: [
+						{ with: "StructMembers",
+							sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+							emitAsOwnItems: "full"
+						}]
+					}
+				]
+			},
+			{
+				ifNotEmpty: "ExtentStructMembers",
+				then: [
+					{
+						section: "#text:${LS_MEMBERS_FROM_EXTENTS_DETAILED}" $ (= { LS_MEMBERS_FROM_EXTENTS_DETAILED: "[D]Members from extents (detailed)" }),
+						content: [
+						{ with: "ExtentStructMembers",
+							sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+							emitAsExtItems: "full"
+						}]
+					}
+				]
+			},
+			{
+				ifNotEmpty: "Args",
+				then: [
+					{
+						section: "#text:${LS_ARGUMENTS_DETAILED}" $ (= { LS_ARGUMENTS_DETAILED: "[D]Arguments (detailed)" }),
+						content: [
+						{ with: "Args",
+							sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+							emitAsOwnItems: "full"
+						}]
+					}
+				]
+			},
+			{ on: "%%self", query: [
+					{ membersThat: { named: "^%extra$"}},
+					/*{ unionQuery: [
+						{ with: "%%self" }, 
+						{ membersThat: { named: "^%extra$"}},
+						{ membersThat: { named: "^#"}}
+					]}*/
+				], as: "Extras" },
+			{
+				ifNotEmpty: "Extras",
+				then: [
+					{ with: "Extras", sort: { byMember: "%order", keyFormat: "natural", order: "asc" }, "emitAsOwnItems": "full" }
+				]
+			},
+			{ on: "%%self", query: [
+					{ membersThat: { named: "^%note$"}},
+					{ membersThat: { named: "^#"}}
+				], as: "Notes" },
+			{
+				ifNotEmpty: "Notes",
+				then: [
+					{
+						section: "#text:${LS_NOTES}" $ (= { LS_NOTES: "[D]Notes" }),
+						content: [
+						{ with: "Notes",
+							sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+							"emitAsOwnItems": "full"
+						}]
+					}
+				]
+			},
+			{ on: "%%self", "query": ["QProperties"], as: "Properties" },
+			{
+				ifNotEmpty: "Properties",
+				then: [
+					{
+						section: "#text:${LS_PROPERTIES}" $ (= { "LS_PROPERTIES": "[D]Properties" }),
+						content: [
+						{ with: "Properties",
+							sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+							emitAsOwnItems: "full"
+						}]
+					}
+				]
+			},
+			{ on: "Extends", query: ["QProperties"], as: "ExtentProperties" },
+			{
+				ifNotEmpty: "ExtentProperties",
+				then: [
+					{
+						section: "#text:${LS_PROPERTIES_FROM_EXTENTS}" $ (= { "LS_PROPERTIES_FROM_EXTENTS": "[D]Properties from extents" }),
+						content: [
+						{ with: "ExtentProperties",
+							sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+							emitAsExtItems: "full"
+						}]
+					}
+				]
+			},
+			{ on: "%%self", query: ["QMethods"], as: "Methods" },
+			{
+				ifNotEmpty: "Methods",
+				then: [
+					{
+						section: "#text:${LS_METHODS}" $ (= { "LS_METHODS": "[D]Methods" }),
+						content: [
+						{ with: "Methods",
+							sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+							emitAsOwnItems: "full"
+						}]
+					}
+				]
+			},
+			{ on: "Extends", query: ["QMethods"], as: "ExtentMethods" },
+			{
+				ifNotEmpty: "ExtentMethods",
+				then: [
+					{
+						section: "#text:${LS_METHODS_FROM_EXTENTS}" $ (= { "LS_METHODS_FROM_EXTENTS": "[D]Methods from extents" }),
+						content: [
+						{ with: "ExtentMethods",
+							sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+							emitAsExtItems: "full"
+						}]
+					}
+				]
+			},
+			{ on: "%%self", query: ["QOtherMembers"], as: "Other" },
+			{
+				ifNotEmpty: "Other",
+				then: [
+					{ with: "Other",
+						sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+						emitAsOwnItems: "full"
+					}
+				]
+			},
+			{ on: "%%self", query: ["QLinked"], as: "Linked" },
+			{
+				ifNotEmpty: "Linked",
+				then: [
+					{ with: "Linked",
+						sort: { byMember: "%order", keyFormat: "natural", order: "asc" },
+						emitAsExtItems: "full"
+					}
+				]
+			}
+		]
+	}
+]
