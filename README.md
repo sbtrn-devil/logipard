@@ -80,11 +80,25 @@ Install Node.js 13 or higher.
 
 Then, install Logipard CLI either globally:
 ```
-// TODO
+# from gitverse
+npm install -g git+https://gitverse.ru/mikle33/logipard
+
+# or: from github
+# TODO
+
+# or: from npm
+# TODO
 ```
 or locally into your current folder:
 ```
-// TODO
+# from gitverse
+npm install git+https://gitverse.ru/mikle33/logipard
+
+# or: from github
+# TODO
+
+# or: from npm
+# TODO
 ```
 
 
@@ -405,7 +419,7 @@ just keep in mind that it is where you reify your conventions on document model,
 							"lpgwrite-example-render-html": {
 								"outFile": "lp-generate.gen/leftpad-doc.html",
 								"emitToc": true,
-								"inTemplateFile": "leftpad-doc.tpl.html",
+								"inTemplateFile": "leftpad-doc-html.tpl.html",
 								"htmlPlaceholder": "HTML_TARGET",
 								"cssPlaceholder": "CSS_TARGET",
 								"localizedKeywords": {
@@ -489,6 +503,7 @@ $ npm install git+https://<whereismygit.com>/leftpad
 ```
 #LP }
 #LP ./usage { <#./%title: Usage#> <#./%order: 2#>
+Use it this way:
 ```
 const { leftpad } = require('./leftpad');
 
@@ -525,6 +540,23 @@ Then let's add this...
 <small><u>Edit file</u></small>: `<PROJECT_ROOT>/lp-config.json`
 ```
 ...
+	"lp-extract": {
+	... // under "items"...
+		"items": [
+			// add third item (to capture the new readme.lp-txt):
+			...,
+			{
+				"inFiles": ["**/*.lp-txt"],
+				"excludeInFiles": [],
+				"outDir": "lp-extract.gen",
+				"reader": "${LP_HOME}/lpxread-basic" $,
+				"lpxread-basic": {
+					"srcType": "lp-text"
+				}
+			}
+		]
+	},
+...
 	"lp-generate": {
 	... // in the first (and so far the only) item under "items"...
 		"items": [
@@ -534,7 +566,7 @@ Then let's add this...
 				"lpgwrite-example": {
 ... // leave most as is, except for....
 						"docRootItems": {
-							"query": [{ "with": ["M/readme", "M/functions"] }, // <-- change "query" member to this
+							"query": [{ "with": ["M/readme", "M/functions"] }], // <-- change "query" member to this
 							],
 ... // everything here remains as is
 						},
@@ -548,7 +580,7 @@ Then let's add this...
 					"program": file("${LP_HOME}/lpgwrite-example-docprg.lpson" $, {
 						"docprgPrologue": [ { "nameAlias": "M", "name": "domain.our-unique.leftpad.for-nodejs" } ],
 						"docRootItems": {
-							"query": [{ "with": ["M/readme"] },
+							"query": [{ "with": ["M/readme"] }],
 							],
 							"sort": { "byMember": "%order", "keyFormat": "natural", "order": "asc" }
 						}

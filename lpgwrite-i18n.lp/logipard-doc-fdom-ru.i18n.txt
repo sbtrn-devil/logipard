@@ -5111,15 +5111,35 @@ Logipard предлагает новый подход к созданию док
 Далее, установите Logipard CLI или глобально:
 \ "Para:F/OkwAIdnvG8EwWLvgIs/wU3WSMILuETFkTCcZ2/BZzh4oEkC4hqVRTsV35Oebc/PRMor80n69umvcmJjzW7Zg=="
 
-/ "Para:GoEVhiKST3Q1X3jWOesehYVkzW1+HTAbABeI7WGg5ffSoter33yLoios3u21hTOR1UQ+enndRZy9uD1ArIWMLw=="
+/ "Para:vmZX38CrV4v6CS0U6s1XivmteipcQ3QLo/VxNv6q9jKgerZVceLjVEB+cq4AmVSVvBV6bXyQe/t7N82DW/dKXw=="
 ```
-// TODO
+# с gitverse
+npm install -g git+https://gitverse.ru/mikle33/logipard
+
+# или: с github
+# TODO
+
+# или: с npm
+# TODO
 ```
-\ "Para:GoEVhiKST3Q1X3jWOesehYVkzW1+HTAbABeI7WGg5ffSoter33yLoios3u21hTOR1UQ+enndRZy9uD1ArIWMLw=="
+\ "Para:vmZX38CrV4v6CS0U6s1XivmteipcQ3QLo/VxNv6q9jKgerZVceLjVEB+cq4AmVSVvBV6bXyQe/t7N82DW/dKXw=="
 
 / "Para:7iC0n22ujxF7pvIFqHVrw1yaNltyivWCTSGE+I1XTn4AUohEayOvwlIO7Ed0R41ENiODDD0PTHUZUtW8wt3Nfw=="
 или локально в вашу текущую папку:
 \ "Para:7iC0n22ujxF7pvIFqHVrw1yaNltyivWCTSGE+I1XTn4AUohEayOvwlIO7Ed0R41ENiODDD0PTHUZUtW8wt3Nfw=="
+
+/ "Para:ky442Fyd2qQ3TN8/gO0zE7fMv9+gBb2HjsPNW3EraBo/vLvt8ZgSPLGzMV1Z87ncCdxzI2MUuPGH5JzhzbxdYQ=="
+```
+# с gitverse
+npm install git+https://gitverse.ru/mikle33/logipard
+
+# или: с github
+# TODO
+
+# или: с npm
+# TODO
+```
+\ "Para:ky442Fyd2qQ3TN8/gO0zE7fMv9+gBb2HjsPNW3EraBo/vLvt8ZgSPLGzMV1Z87ncCdxzI2MUuPGH5JzhzbxdYQ=="
 
 / "Para:nWU/iS5kaVAfI4aiKhYs7rJOl9GRKkY64x0bGwC3wNIdk32icSe3S+TJf860QrOSQaDDOyNb8Pp0qYb/06iIQw=="
 После глобальной инсталляции, Logipard CLI можно запустить из любой текущей папки:
@@ -5497,7 +5517,7 @@ HTML_TARGET
 <small><u>Создать файл</u></small>: `<PROJECT_ROOT>/lp-config.json`
 \ "Para:e+hgw4cMTnsecJ120BLNYVognM0ivICO3QFyFnel0g4bFbfV1S/wkpKjNlUHbOvZiJeNHyCSFUxrvdCXKN7AuQ=="
 
-/ "Para:ssr8vjIgHdGmjt4GyEPPgsXR63pX7Pr9eYEmpnLUn7BYRkk3cUemCcK6IMyFak/Sdaq0hRVfiJNgm6Q6cOeqKQ=="
+/ "Para:4XPzTOdPdm1qmWO9E54Y6niG2++BRYqKNZtk2sWGOCPinASYSZBABjllcOynsz2aal31yU0rvbCzbYMhYx51Ew=="
 ```
 //#charset utf-8
 // (Этот комментарий выше будет принят во внимание; предполагается, что вы сохраняете данный файл в UTF-8)
@@ -5518,7 +5538,7 @@ HTML_TARGET
 				"inFiles": ["**/*.js"], 
 				"excludeInFiles": [],
 				"outDir": "lp-extract.gen",
-				"reader": "${LP_HOME}/lpxread-basic" $, // символ $ в конце - не опечатка
+				"reader": "${LP_HOME}/lpxread-basic" $, // символ $ в конце - не опечатка!
 				"lpxread-basic": {
 					"srcType": "generic-c-like"
 				}
@@ -5592,7 +5612,7 @@ HTML_TARGET
 							"lpgwrite-example-render-html": {
 								"outFile": "lp-generate.gen/leftpad-doc.html",
 								"emitToc": true,
-								"inTemplateFile": "leftpad-doc.tpl.html",
+								"inTemplateFile": "leftpad-doc-html.tpl.html",
 								"htmlPlaceholder": "HTML_TARGET",
 								"cssPlaceholder": "CSS_TARGET",
 								"localizedKeywords": {
@@ -5615,7 +5635,7 @@ HTML_TARGET
 	}
 }
 ```
-\ "Para:ssr8vjIgHdGmjt4GyEPPgsXR63pX7Pr9eYEmpnLUn7BYRkk3cUemCcK6IMyFak/Sdaq0hRVfiJNgm6Q6cOeqKQ=="
+\ "Para:4XPzTOdPdm1qmWO9E54Y6niG2++BRYqKNZtk2sWGOCPinASYSZBABjllcOynsz2aal31yU0rvbCzbYMhYx51Ew=="
 
 ## Item: /domain.logipard/readme/quickstart/run-lp-cli/%title
 # lp-readme.lp-txt
@@ -5696,7 +5716,7 @@ GENERATE: 69.098ms
 <small><u>Создать файл</u></small>: `<PROJECT_ROOT>/readme.lp-txt`
 \ "Para:9X3JniRjGKkPU5CwHKf/gR6kcJmmNUg+ecQpeZXoTY60LUGjQcpNx/knLLnaEO15HbyiP8fZnOCC7h00Xr2IHg=="
 
-/ "Para:EJjeNVLzthCtS/uWKvveByVsQ+LShKlEoDKPoGAH2B4bA7u9hBqITvTlidq2q6unvdJXaamiC6U8bd++WkjFkA=="
+/ "Para:QAWf9CxrE8i+tnW4+nsITjPNbfUkV+EVCXZNPzGDc3bhF8XyFGT6m4+xdzEOEoORrhwqUr2igjiTh4MjQrE9WQ=="
 ````
 #LP-include leftpad-module-inc.lp-txt
 #-LP обратите внимание на разный синтаксис, когда мы используем чисто-текстово-образные файлы
@@ -5746,7 +5766,7 @@ Was not documented with LP, so it pretty sucked.
 #LP }
 #LP }
 ````
-\ "Para:EJjeNVLzthCtS/uWKvveByVsQ+LShKlEoDKPoGAH2B4bA7u9hBqITvTlidq2q6unvdJXaamiC6U8bd++WkjFkA=="
+\ "Para:QAWf9CxrE8i+tnW4+nsITjPNbfUkV+EVCXZNPzGDc3bhF8XyFGT6m4+xdzEOEoORrhwqUr2igjiTh4MjQrE9WQ=="
 
 / "Para:vv6r2g+89vycgYt5EQxid+f6drxDLTrnHldCkh0IzbjzTBI8ELs2fN09bSVfP8+6ejstuv91pmOGpq9qPkU69g=="
 Теперь добавим вот что...
@@ -5756,8 +5776,25 @@ Was not documented with LP, so it pretty sucked.
 <small><u>Редактировать файл</u></small>: `<PROJECT_ROOT>/lp-config.json`
 \ "Para:DucrYBmCYqPO0wSSEu/8Rari6YFWHw9XqeobZFmWu77+C9perMCvHyGadPWJM/KAmVhOyiwdrpy9ScMh6NZUhg=="
 
-/ "Para:Aonb/AAIDOQprdIqnKUHeP1pp91FzKdLR038+4zBMSjZbJwvnwdtYcpZPTJaPac0S0rTXsAzZ9fDXIg76p/4+A=="
+/ "Para:Ruqq53eFmNqSowroGzo2oCElmqr/BreU4jFca0wT+YLmupgfY1JFnlfzWBbSWwDTgzIGN7EAR8iBFyorwNuTDA=="
 ```
+...
+	"lp-extract": {
+	... // под "items"...
+		"items": [
+			// добавьте третий элемент (для учёта нового readme.lp-txt):
+			...,
+			{
+				"inFiles": ["**/*.lp-txt"],
+				"excludeInFiles": [],
+				"outDir": "lp-extract.gen",
+				"reader": "${LP_HOME}/lpxread-basic" $,
+				"lpxread-basic": {
+					"srcType": "lp-text"
+				}
+			}
+		]
+	},
 ...
 	"lp-generate": {
 	... // первый (и пока единственный) элемент под "items"...
@@ -5768,7 +5805,7 @@ Was not documented with LP, so it pretty sucked.
 				"lpgwrite-example": {
 ... // в основном оставьте, как есть, кроме....
 						"docRootItems": {
-							"query": [{ "with": ["M/readme", "M/functions"] }, // <-- замените содержимое члена "query" на вот такое
+							"query": [{ "with": ["M/readme", "M/functions"] }], // <-- замените содержимое члена "query" на вот такое
 							],
 ... // всё остальное остаётся как есть
 						},
@@ -5782,7 +5819,7 @@ Was not documented with LP, so it pretty sucked.
 					"program": file("${LP_HOME}/lpgwrite-example-docprg.lpson" $, {
 						"docprgPrologue": [ { "nameAlias": "M", "name": "domain.our-unique.leftpad.for-nodejs" } ],
 						"docRootItems": {
-							"query": [{ "with": ["M/readme"] },
+							"query": [{ "with": ["M/readme"] }],
 							],
 							"sort": { "byMember": "%order", "keyFormat": "natural", "order": "asc" }
 						}
@@ -5806,7 +5843,7 @@ Was not documented with LP, so it pretty sucked.
 ...
 
 ```
-\ "Para:Aonb/AAIDOQprdIqnKUHeP1pp91FzKdLR038+4zBMSjZbJwvnwdtYcpZPTJaPac0S0rTXsAzZ9fDXIg76p/4+A=="
+\ "Para:Ruqq53eFmNqSowroGzo2oCElmqr/BreU4jFca0wT+YLmupgfY1JFnlfzWBbSWwDTgzIGN7EAR8iBFyorwNuTDA=="
 
 / "Para:l584WasxwDQJCN0xm1hM2/SyEAR6bdIeH4P4DMbK16qgwxGoN0BY6K8brZJh5EmUpXjdiScrp4HW7zAw9bwYdQ=="
 Снова запустите конвейер LP:

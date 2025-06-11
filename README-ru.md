@@ -78,7 +78,14 @@ Logipard предлагает новый подход к созданию док
 
 
 ```
-// TODO
+# с gitverse
+npm install -g git+https://gitverse.ru/mikle33/logipard
+
+# или: с github
+# TODO
+
+# или: с npm
+# TODO
 ```
 
 или локально в вашу текущую папку:
@@ -86,7 +93,14 @@ Logipard предлагает новый подход к созданию док
 
 
 ```
-// TODO
+# с gitverse
+npm install git+https://gitverse.ru/mikle33/logipard
+
+# или: с github
+# TODO
+
+# или: с npm
+# TODO
 ```
 
 После глобальной инсталляции, Logipard CLI можно запустить из любой текущей папки:
@@ -352,7 +366,7 @@ HTML_TARGET
 				"inFiles": ["**/*.js"], 
 				"excludeInFiles": [],
 				"outDir": "lp-extract.gen",
-				"reader": "${LP_HOME}/lpxread-basic" $, // символ $ в конце - не опечатка
+				"reader": "${LP_HOME}/lpxread-basic" $, // trailing $ is not a typo
 				"lpxread-basic": {
 					"srcType": "generic-c-like"
 				}
@@ -426,7 +440,7 @@ HTML_TARGET
 							"lpgwrite-example-render-html": {
 								"outFile": "lp-generate.gen/leftpad-doc.html",
 								"emitToc": true,
-								"inTemplateFile": "leftpad-doc.tpl.html",
+								"inTemplateFile": "leftpad-doc-html.tpl.html",
 								"htmlPlaceholder": "HTML_TARGET",
 								"cssPlaceholder": "CSS_TARGET",
 								"localizedKeywords": {
@@ -559,6 +573,23 @@ Was not documented with LP, so it pretty sucked.
 
 ```
 ...
+	"lp-extract": {
+	... // под "items"...
+		"items": [
+			// добавьте третий элемент (для учёта нового readme.lp-txt):
+			...,
+			{
+				"inFiles": ["**/*.lp-txt"],
+				"excludeInFiles": [],
+				"outDir": "lp-extract.gen",
+				"reader": "${LP_HOME}/lpxread-basic" $,
+				"lpxread-basic": {
+					"srcType": "lp-text"
+				}
+			}
+		]
+	},
+...
 	"lp-generate": {
 	... // первый (и пока единственный) элемент под "items"...
 		"items": [
@@ -568,7 +599,7 @@ Was not documented with LP, so it pretty sucked.
 				"lpgwrite-example": {
 ... // в основном оставьте, как есть, кроме....
 						"docRootItems": {
-							"query": [{ "with": ["M/readme", "M/functions"] }, // <-- замените содержимое члена "query" на вот такое
+							"query": [{ "with": ["M/readme", "M/functions"] }], // <-- замените содержимое члена "query" на вот такое
 							],
 ... // всё остальное остаётся как есть
 						},
@@ -582,7 +613,7 @@ Was not documented with LP, so it pretty sucked.
 					"program": file("${LP_HOME}/lpgwrite-example-docprg.lpson" $, {
 						"docprgPrologue": [ { "nameAlias": "M", "name": "domain.our-unique.leftpad.for-nodejs" } ],
 						"docRootItems": {
-							"query": [{ "with": ["M/readme"] },
+							"query": [{ "with": ["M/readme"] }],
 							],
 							"sort": { "byMember": "%order", "keyFormat": "natural", "order": "asc" }
 						}
