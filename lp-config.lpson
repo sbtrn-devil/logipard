@@ -175,7 +175,7 @@ Logipard is a tool and framework for generating software documentation by extrac
 like Doxygen, Javadoc, ROBODoc, etc., but addresses several shortcomings found in the existing solutions.
 
 - Readme pages: [EN](README.md), [RU](README-ru.md)
-- Full documentation pages: TODO
+- Full documentation pages: [EN](https://sbtrn-devil.github.io/logipard/index.html), [RU](https://sbtrn-devil.github.io/logipard/index-ru.html)
 ---
 								```,
 								footer: ```
