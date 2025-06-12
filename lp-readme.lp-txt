@@ -60,7 +60,7 @@ Then, install Logipard CLI either globally:
 npm install -g git+https://gitverse.ru/mikle33/logipard
 
 # or: from github
-# TODO
+npm install -g git+https://github.com/sbtrn-devil/logipard
 
 # or: from npm
 # TODO
@@ -71,7 +71,7 @@ or locally into your current folder:
 npm install git+https://gitverse.ru/mikle33/logipard
 
 # or: from github
-# TODO
+npm install git+https://github.com/sbtrn-devil/logipard
 
 # or: from npm
 # TODO
