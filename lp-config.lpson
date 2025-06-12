@@ -91,7 +91,6 @@
 					program: file("${LP_HOME}/lpgwrite-example-docprg.lpson" $, {
 						docprgPrologue: file("lp-docprg-items.lpson").docprgPrologue,
 						docRootItems: file("lp-docprg-items.lpson").docRootItems,
-						//docRootItems: file("lp-docprg-items.lpson").docRootItems2,
 						LS_EXTENDS: "Extends (is a)",
 						LS_MEMBERS: "Members",
 						LS_NAME: "Name",
