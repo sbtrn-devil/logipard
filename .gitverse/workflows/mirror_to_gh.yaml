@@ -1,0 +1,36 @@
+name: Mirror Repository
+ 
+on:
+  push:
+    branches: 
+      - '*'  # Зеркалировать все ветки
+    tags:
+      - '*'  # Зеркалировать все теги
+ 
+jobs:
+  mirror:
+    runs-on: ubuntu-cloud-runner
+    permissions:
+      contents: write  # Требуется для force push
+ 
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Полная история коммитов
+ 
+    - name: Configure Git
+      run: |
+        git config --global user.name "Mihail V"
+        git config --global user.email "mikle33@yandex.ru"
+ 
+    - name: Mirror to Remote
+      env:
+        TARGET_REPO: "https://${{ secrets.GH_MIRROR_ACTOR }}:${{ secrets.GH_MIRROR_TOKEN }}@github.com/${{ secrets.GH_MIRROR_ACTOR }}/${{ secrets.GH_MIRROR_REPO }}"
+      run: |
+        # Добавляем целевой репозиторий как remote
+        git remote add target $TARGET_REPO
+        
+        # Синхронизируем все ветки и теги
+        git push --mirror --force target
+ 
