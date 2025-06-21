@@ -71,7 +71,7 @@ and this is  data with no markup tag  really
 ~~#>
 
 The markup tag names starting with `LP`, including actually <#~~`<#LP ...#>`~~#> are reserved for Logipard content feed and directives (these names are case-insensitive). Additionally, <#~~`<# ... #>`~~#>
-is treated as shortcut to <#~~`<#LP ...#>`~~#>. Also a reserved tag is <#~~`<#ref ...#>`~~#> (for Logipard item linking, see below), this name is also case-insensitive. All other tags are called **custom tags**,
+is treated as shortcut to <#~~`<#LP ...#>`~~#>. Also reserved tags are <#~~`<#ref ...#>`~~#> (for Logipard item linking, see below) and <#~~`<#here#>`~~#> (for inserting current source file location, see below), these names are also case-insensitive. All other tags are called **custom tags**,
 and their handling is up to compile model writer at <#ref M/stages/compile-stage#>. Their names MAY be case-sensitive, depending on the model writer implementation.
 
 #LP } <-#general#>
@@ -362,6 +362,19 @@ This is <#ref item/name: a link to item/name with alt text#>
 Unspecified alt text is assumed empty. In fact, interpretation of alt text (or absence thereof) is up to FDOM user, such as a generator.
 
 #LP } <-#ref#>
+
+#LP lpinput/here { <#./%title: Source location references#> <#./%order: 4.5#>
+
+<#~~`<#HERE source-file-location#>`~~#> markup tag will be replaced with its source file location reference, specifically with the `source-file-location`. For example, like this: <#here#>.
+This capability is intended for things like dev notes, when you need to indicate an explicit location associated with a particular comment.
+
+Note that identification of the location relies on support by extraction reader. The `source-file-location` is expected to be provided by the extractor rather than by user.
+LP built-in extractor <#ref M/stages/extract-stage/builtin-readers/lpxread-basic#> does this to allow use of this tag as simple as inline <#~~`<#HERE#>`~~#>, yielding result like this: <#here#>.
+
+The <#~~`<#HERE#>`~~#> location references are supported at FDOM compilation stage at built-in basis (given they are correctly prepared by the extractor), allowing to back this capability if a particular
+pipeline wants to support it. A customized pipeline and user input format, however, are free to not rely on this and add its own methods of identifying/specifying the source locations.
+
+#LP } <-#here#>
 
 #LP lpinput/tag-on { <#./%title: Tagging and reverse tagging#> <#./%order: 5#>
 

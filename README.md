@@ -8,20 +8,20 @@ like Doxygen, Javadoc, ROBODoc, etc., but addresses several shortcomings found i
 ---
 
 
-- Getting started with Logipard[>>](#_AuNVIc0W-206)
-  - Installation[>>](#_AuNVIc0W-208)
-  - A quickstart example[>>](#_AuNVIc0W-211)
-    - Documenting basics[>>](#_AuNVIc0W-214)
-    - Good style tips[>>](#_AuNVIc0W-217)
-    - Prepare HTML template file[>>](#_AuNVIc0W-220)
-    - Prepare LP configuration file[>>](#_AuNVIc0W-223)
-    - Run LP pipeline[>>](#_AuNVIc0W-226)
-    - Prepare README snippet[>>](#_AuNVIc0W-229)
-    - Conclusion[>>](#_AuNVIc0W-232)
+- Getting started with Logipard[>>](#_AuFQCmFf-165)
+  - Installation[>>](#_AuFQCmFf-167)
+  - A quickstart example[>>](#_AuFQCmFf-170)
+    - Documenting basics[>>](#_AuFQCmFf-173)
+    - Good style tips[>>](#_AuFQCmFf-176)
+    - Prepare HTML template file[>>](#_AuFQCmFf-179)
+    - Prepare LP configuration file[>>](#_AuFQCmFf-182)
+    - Run LP pipeline[>>](#_AuFQCmFf-185)
+    - Prepare README snippet[>>](#_AuFQCmFf-188)
+    - Conclusion[>>](#_AuFQCmFf-191)
 
 ---
 
-<a name="_AuNVIc0W-206"></a>
+<a name="_AuFQCmFf-165"></a>
 # Getting started with Logipard #
 
 In this section we'll explain what Logipard is and how to approach it.
@@ -73,7 +73,7 @@ Logipard introduces a novel approach to documentation generation, centered aroun
 
 Now let's get to know the flow...
 
-<a name="_AuNVIc0W-208"></a>
+<a name="_AuFQCmFf-167"></a>
 ## Installation ##
 
 Install Node.js 13 or higher.
@@ -122,9 +122,9 @@ node_modules\.bin\lp-cli [cmd line options]
 Run lp-cli without options or with `-h` or `--help` for summary of the command line options (they are quite few, most of the work
 is intended to be specified via configuration file(s)).
 
-After installation you can go through `A quickstart example`[>>](#_AuNVIc0W-211) to get a grip on how things are done.
+After installation you can go through `A quickstart example`[>>](#_AuFQCmFf-170) to get a grip on how things are done.
 
-<a name="_AuNVIc0W-211"></a>
+<a name="_AuFQCmFf-170"></a>
 ## A quickstart example ##
 
 For example, you are going to write an innovative library to make a revolution in the programming world.
@@ -132,7 +132,7 @@ For example, you are going to write an innovative library to make a revolution i
 You have created a directory for the project to live in (let's refer to it as `<PROJECT_ROOT>`), possibly even created a `package.json`
 in it (let's say it is a Node.js library).
 
-Also you have already installed Logipard CLI as described in `Installation`[>>](#_AuNVIc0W-208) - we'll assume the CLI command is `lp-cli [options]`
+Also you have already installed Logipard CLI as described in `Installation`[>>](#_AuFQCmFf-167) - we'll assume the CLI command is `lp-cli [options]`
 (adjust it if you installed locally).
 
 Create the main library codebase:
@@ -152,7 +152,7 @@ module.exports.leftpad = function leftpad(str, len, padding = ' ') {
 
 Now we can start documenting our stuff.
 
-<a name="_AuNVIc0W-214"></a>
+<a name="_AuFQCmFf-173"></a>
 ### Documenting basics ###
 
 The primary source for documentation is source code annotations. In our case, we can add some this way:
@@ -211,7 +211,7 @@ than bundled with parameters block - again, purely for example; we could as well
 or in a different file, or even place different sub-items across different locations. Probably it makes not much sense for things like function arguments and return value, but these may be not the only
 items related to this function you may want to document under this node.
 
-<a name="_AuNVIc0W-217"></a>
+<a name="_AuFQCmFf-176"></a>
 ### Good style tips ###
 
 Although there are no inherent restrictions on choosing structure and naming items in the document model, there are a few points to take for keeping good style
@@ -267,7 +267,7 @@ are an option.)
 // ...the remaining part of the file still unchanged
 ```
 
-<a name="_AuNVIc0W-220"></a>
+<a name="_AuFQCmFf-179"></a>
 ### Prepare HTML template file ###
 
 In this quickstart we are making a HTML documentation, and first thing we will need for this is to prepare a HTML template file.
@@ -317,7 +317,7 @@ HTML_TARGET
 
 This template is purely for example, and includes a bare minimum of items possible. Note the `CSS_TARGET` and `HTML_TARGET` placeholders.
 
-<a name="_AuNVIc0W-223"></a>
+<a name="_AuFQCmFf-182"></a>
 ### Prepare LP configuration file ###
 
 Now, to proceed to something more substantial, we need to prepare Logipard configuration file. We'll not explain right now most of the magic happening here,
@@ -443,7 +443,7 @@ just keep in mind that it is where you reify your conventions on document model,
 }
 ```
 
-<a name="_AuNVIc0W-226"></a>
+<a name="_AuFQCmFf-185"></a>
 ### Run LP pipeline ###
 
 We are all set to generate our quickstart project's documentation page.
@@ -476,7 +476,7 @@ made up of appropriate slices of this DB, but they all will share it as the data
 
 Let's proceed with the quickstart and see how this can work in our case.
 
-<a name="_AuNVIc0W-229"></a>
+<a name="_AuFQCmFf-188"></a>
 ### Prepare README snippet ###
 
 Now that we have our library code finalized, we would like to supply something like README file. And, ideally, have it both as standalone README.md and as a part of main HTML page.
@@ -614,7 +614,7 @@ Now, check again `lp-generate.gen`: you should see new file `leftpad-README.md` 
 now it includes the same information as in readme, while still featuring the functions reference, and you can see some other improvements you might have guessed from the
 readme source.
 
-<a name="_AuNVIc0W-232"></a>
+<a name="_AuFQCmFf-191"></a>
 ### Conclusion ###
 
 This is how the basic documentation tasks are done with Logipard, and possibly more than sufficient for everyday needs. But there are much more things you can do within its framework
@@ -624,4 +624,4 @@ check the main documentation.
 Also, as an example of a more complex project documented with Logipard, feel free to explore Logipard code itself. All of the documentation sources are intentionally retained in its package.
 
 ---
-The page generated by Logipard 1.0.0 using lpgwrite-example + lpgwrite-example-render-md generator
+The page generated by Logipard 1.0.1 using lpgwrite-example + lpgwrite-example-render-md generator

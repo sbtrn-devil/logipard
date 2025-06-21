@@ -182,6 +182,13 @@ async function preprocessItems(itemConfig, inRootDir, filePath, normalFilePath, 
 				var subItems = await parseInputFile(itemConfig, pathToInclude, fileSet, moduleLookupPath, activeFileSet);
 				preprocessedItems.push(...subItems);
 				continue;
+			} else if (ucTag == 'HERE') {
+				if (item.items.length != 1 || typeof(item.items[0]) != 'string') {
+					console.warn("HERE tag ignored - the source location text must be a plain string with no inner tags");
+					continue;
+				}
+
+				item.srcLocText = item.items[0].trim();
 			}
 
 			preprocessedItems.push(item);
@@ -757,6 +764,17 @@ async function processParsedFile(itemConfig, preparsedFile, writer, modelOutput,
 					refNodeName: targetNode.fullName,
 					refText,
 					//sourceFile: items[sNormalFilePath]) // attributing to actual source file is needed for smart incremental dependency check, but it is out of scope for 1.0
+					sourceFile: preparsedFile[sNormalFilePath]
+				});
+
+				continue;
+			}
+
+			if (ucTag == "HERE") {
+				await writer.appendHereTag({
+					modelOutput,
+					targetNodeName: currentScopeNode.fullName,
+					srcLocText: item.srcLocText,
 					sourceFile: preparsedFile[sNormalFilePath]
 				});
 

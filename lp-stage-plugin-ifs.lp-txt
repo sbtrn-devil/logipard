@@ -4,7 +4,8 @@
 
 #LP extract/reader { <#./%title: Extraction reader interface#>
 Extraction reader is invoked when processing an extact job item. Its purpose is to parse source file data and to return the extracted annotations in LP input format (<#ref M/lpinput#>).
-It is specified by `reader` field of an extract job item (<#ref M/lp-config.json/members/lp-extract/items[]/reader#>).
+It is specified by `reader` field of an extract job item (<#ref M/lp-config.json/members/lp-extract/items[]/reader#>). Note that, if extraction product contains <#~~`<#here#>`~~#> tags,
+then filling it with correct text (<#~~`<#here location-text#>`~~#>) is extractor reader's responsibility as well.
 Extraction reader must be implemented as CommonJS module that exposes the following interface...
 
 The interface must be exposed by `reader` module via _module.exports_ similar to:
@@ -42,6 +43,7 @@ exports.invalidateSourceFile = async function invalidateSourceFile({ modelOutput
 exports.appendContent = async function appendContent({ modelOutput, targetNodeName, content, sourceFile }) { ... }
 exports.tagTo = async function tagTo({ modelOutput, tagNodeName, targetNodeName, sourceFile }) { ... }
 exports.appendRef = async function appendRef({ modelOutput, targetNodeName, refNodeName, refText, sourceFile }) { ... }
+exports.appendHereTag = async function appendHereTag({ modelOutput, targetNodeName, srcLocText, sourceFile }) { ... }
 exports.processCustomTag = async function processCustomTag({ modelOutput, targetNodeName, tagName, toolkit, sourceFile }) { ... }
 ```
 
@@ -111,6 +113,16 @@ Append an inline reference to the specified target node's content.
 #LP ./sourceFile %arg: String, the path to the input file from which this reference originates, relative to the compile job's <#ref M/lp-config.json/members/lp-compile/items[]/inRootDir#>.
 #LP ./%return: none
 #LP ./%errors: The `appendRef` can throw an error.
+#LP } <-#appendRef#>
+
+#LP compile/writer/appendHereTag %member %method { <#./%title %noloc: async .appendRef({ modelOutput, targetNodeName, srcLocText, sourceFile })#>
+Append a <#~~`<#here#>`~~#> source file reference to the specified target node's content.
+#LP ./modelOutput %arg: Model output handle (as returned by <#ref writer/openModelOutput#>).
+#LP ./targetNodeName %arg: String, the full FDOM name of the target node where reference will be appended.
+#LP ./srcLocText %arg: String, the source location text. Note it will be as obtained from the extractor.
+#LP ./sourceFile %arg: String, the path to the input file from which this <#~~`<#here#>`~~#> here tag originates, relative to the compile job's <#ref M/lp-config.json/members/lp-compile/items[]/inRootDir#>.
+#LP ./%return: none
+#LP ./%errors: The `appendHereTag` can throw an error.
 #LP } <-#appendRef#>
 
 #LP compile/writer/processCustomTag %member %method { <#./%title %noloc: async .processCustomTag({ modelOutput, targetNodeName, tagName, toolkit, sourceFile })#>

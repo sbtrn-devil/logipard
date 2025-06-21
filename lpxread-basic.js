@@ -35,6 +35,8 @@ const iconvlite = require('iconv-lite');
 // Additionally, charset specification is allowed by using comment like `//#charset utf-8` (only once per file, "charset" keyword must be in lowercase).
 // What is considered a single-line comment, depends on the source type specified for this extraction work item (see <#ref ./extra-item-config#>).
 //
+// The <#~~`<#here#>`~~#> tag is automatically converted to <#~~`<#here source-file-location-of-this-tag#>`~~#>, supporting source location references using this method.
+//
 // For plain text "language", every line is treated as a single-line comment.<#-LP (This file is obviously an example.)#> As a side effect of this convention,
 // you may need to insert an `#-LP` (or `#LP-`) comment line to mark termination of LP tag started by `<#~~#LP tag: ...~~#>`.
 // Additionally, in a quite specific case when you have a code fragment that contains LP markup, you should place it between `#LP~delimiter~` delimiter lines
@@ -82,11 +84,11 @@ const iconvlite = require('iconv-lite');
 // The #charset starting line is the only one in the sequence, and value of the charset is extracted into the 2nd group
 // (all groups in startOfLinePattern must be non-capturing).
 function getFragmentExtractorRegex(startOfLinePattern) {
-	return new RegExp(`(?:^|(?<=\r?\n|\n?\r))${startOfLinePattern}(\s*#charset\\b(.*)|\\s*(?:-#|#-?)LP(?:~.*?~|[-A-Za-z]*).*((?:\r?\n|\n?\r)${startOfLinePattern}(?!\\s*(?:-#|#-?)LP(?:~.*?~|[-A-Za-z]*)|#charset\\b).*)*)`, "g");
+	return new RegExp(`(?:^|(?<=\\r?\\n|\\n?\\r))${startOfLinePattern}(\s*#charset\\b(.*)|\\s*(?:-#|#-?)LP(?:~.*?~|[-A-Za-z]*).*((?:\\r?\\n|\\n?\\r)${startOfLinePattern}(?!\\s*(?:-#|#-?)LP(?:~.*?~|[-A-Za-z]*)|#charset\\b).*)*)`, "g");
 }
 
 function getNewlineStripperRegex(startOfLinePattern) {
-	return new RegExp(`(?:^|(?<=\r?\n|\n?\r))${startOfLinePattern}`, "g");
+	return new RegExp(`(?:^|(?<=\\r?\\n|\\n?\\r))${startOfLinePattern}`, "g");
 }
 
 exports.parseInput = async function parseInput({ buffer, itemConfig, filePath }) {
@@ -121,7 +123,8 @@ exports.parseInput = async function parseInput({ buffer, itemConfig, filePath })
 
 	// attempt = 0 is with utf-8 (as read), if charset is found then attempt = 1 is retried
 	// on the buffer re-decoded with the given charset
-	var fragments = new Array();
+	var fragments = new Array(),
+		fragOffsets = new Array();
 	RE_DECODE:
 	for (var pass = 0; pass < 2; pass++) {
 		var lpEscapeMark = null;
@@ -138,15 +141,50 @@ exports.parseInput = async function parseInput({ buffer, itemConfig, filePath })
 				var newCharset = match[2].toLowerCase().replace('-', ''); // iconv accepts charset names like "utf8", not "UTF-8"
 				src = iconvlite.decode(buffer, newCharset);
 				fragments.length = 0;
+				fragOffsets.length = 0;
 				continue RE_DECODE;
 			}
-			else fragments.push(match[1]);
+			else {
+				fragments.push(match[1]);
+				fragOffsets.push(match.index);
+			}
 		}
 		break;
 	}
 
+
+	// calculator of line by offset in source text
+	// optimized for repeated calculations
+	var calcs = 0;
+	function newOffsetToLineCalculator(src, startLineIdx = 1) {
+		var srcOffsetsPerLine = new Array();
+		srcOffsetsPerLine.push(0);
+		for (var i = 0, n = src.length; i < n; i++) {
+			if (src.charAt(i) == '\n') srcOffsetsPerLine.push(i + 1);
+		}
+		var nSrcLines = srcOffsetsPerLine.length;
+
+		return {
+			lineIdx: 0,
+			srcOffsetsPerLine,
+			copy() { return {...this}; },
+			lineForOffset(offset) {
+				if (nSrcLines <= 1) return startLineIdx;
+				var dir, limit;
+				if (srcOffsetsPerLine[this.lineIdx] > offset) { dir = -1; limit = 0; }
+				else { dir = 1; limit = srcOffsetsPerLine.length - 1; }
+				for (; this.lineIdx != limit; this.lineIdx += dir) {
+					if (srcOffsetsPerLine[this.lineIdx] <= offset && (this.lineIdx == nSrcLines - 1
+						|| srcOffsetsPerLine[this.lineIdx + 1] > offset)) break;
+				}
+				return this.lineIdx + startLineIdx;
+			}
+		};
+	}
+
 	var RGX_INDENT_COUNT = /^\s*?(?=\S|$)/,
-		RGX_BLANK = /^\s*?$/;
+		RGX_BLANK = /^\s*?$/,
+		RGX_INITIAL_BLANK = /^\s*/;
 
 	function smartTrimIndents(theString) {
 		// if all lines except the first start with same minimum amount of whitespace indents, trim these indents
@@ -174,26 +212,35 @@ exports.parseInput = async function parseInput({ buffer, itemConfig, filePath })
 	
 	for (var fragI in fragments) {
 		var fragment = fragments[fragI];
-		//fragments[fragI] = "<" + smartTrimIndents((fakeStartOfLine + fragment).replace(newlineStripperRegex, '').trim().replace(unifyNewlineRegex, '\n')) + "#>";
 		fragments[fragI] = smartTrimIndents((fakeStartOfLine + fragment).replace(newlineStripperRegex, '').trim().replace(unifyNewlineRegex, '\n'));
+		var initialBlanks = fragment.match(RGX_INITIAL_BLANK);
+		if (initialBlanks) fragOffsets[fragI] += initialBlanks[0].length; // after smart trim, the offsets moved
 	}
 
 	var fragments2 = new Array(),
+		frag2Offsets = new Array(),
 		currentLpEscape = null,
-		currentLpToEscape;
+		currentLpToEscape,
+		curLpEscapeOffset;
 	function flushEscape() {
+		// glue the LP~~-escaped fragment converted to <#~~...~~#> escaped fragment to the last fragment if any exists,
+		// or put as 1st fragment otherwise
 		currentLpEscape = null;
 
 		var escapedString = currentLpToEscape.join("\n");
 		currentLpEscape = null;
 		for (var z = 0; escapedString.indexOf("~" + z + "~#>") != -1; z++) {}
 		escapedString = "<#~" + z + "~" + escapedString + "~" + z + "~#>";
-		if (fragments2.length < 1) fragments2.push(escapedString);
-		else fragments2[fragments2.length - 1] += escapedString;
+		if (fragments2.length < 1) {
+			fragments2.push(escapedString);
+			frag2Offsets.push(curLpEscapeOffset);
+		} else fragments2[fragments2.length - 1] += escapedString;
 	}
 
-	for (var fragment of fragments) {
-		var escapeMatch = fragment.match(RGX_LPX_ESCAPE);
+	for (var fragI in fragments) {
+		var fragment = fragments[fragI],
+			fragOffset = fragOffsets[fragI],
+			escapeMatch = fragment.match(RGX_LPX_ESCAPE);
 		if (currentLpEscape == null) {
 			if (escapeMatch) {
 				currentLpEscape = escapeMatch[1];
@@ -201,6 +248,7 @@ exports.parseInput = async function parseInput({ buffer, itemConfig, filePath })
 				currentLpToEscape.push(fragment.substring(escapeMatch[0].length));
 			} else {
 				fragments2.push(fragment);
+				frag2Offsets.push(fragOffset);
 			}
 		} else {
 			if (escapeMatch && escapeMatch[1] == currentLpEscape) {
@@ -208,18 +256,34 @@ exports.parseInput = async function parseInput({ buffer, itemConfig, filePath })
 				fragments2[fragments2.length - 1] += fragment.substring(escapeMatch[0].length);
 			} else {
 				currentLpToEscape.push(fragment);
+				curLpEscapeOffset = fragOffset;
 			}
 		}
 	}
 	if (currentLpEscape != null) {
-		console.warn
 		console.warn("File %s: #LP~%s~ escape block is not closed", filePath, currentLpEscape);
 		flushEscape();
 	}
 	fragments = fragments2;
+	fragOffsets = frag2Offsets;
 
+	var RGX_HERE = /(<#([A-Za-z]{4})\s*#>)|(?:<#~([^~]*)~[\S\s]*?~\3~#>)/g;
+
+	var srcLineCalculator = newOffsetToLineCalculator(src, 1);
 	for (var fragI in fragments) {
-		fragments[fragI] = "<" + fragments[fragI] + "#>";
+		var fragFirstLine = srcLineCalculator.lineForOffset(fragOffsets[fragI]),
+			fragLineCalculator = newOffsetToLineCalculator(fragments[fragI], fragFirstLine);
+			//^ note - fragment was contracted after the smart trim, but line feeds counting still remains correct
+		fragments[fragI] = "<" + fragments[fragI].replace(RGX_HERE,	function(m0, m1, m2, m3, offset) {
+			if (m2 && m2.toLowerCase() == "here") {
+				var escapedString = filePath + ":" + fragLineCalculator.lineForOffset(offset);
+				for (var z = 0; escapedString.indexOf("~" + z + "~#>") != -1; z++) {}
+				escapedString = "<#~" + z + "~" + escapedString + "~" + z + "~#>";
+				return "<#" + m2 + " " + escapedString + "#>";
+			}
+
+			return m0;
+		}) + "#>";
 	}
 
 	// return fragments joined via newlines - this will deliver us the stripped LP fragments in proper LP file markup

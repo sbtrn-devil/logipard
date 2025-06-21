@@ -26,6 +26,8 @@ function calcPath(workDir, path) {
 // `lpgwirte-example` by itself only determines general, format-agnostic structure of the document, while rendering of the actual document is delegated to sub-plugin named __renderer__. As the title suggests,
 // built-in renderers for single-page HTML and single-page MD are available, but in fact the user can plug in its own renderers.
 //
+// `lpgwrite-example` uses FDOM JSON model representation produced by <#ref M/interfaces/lpcwrite-basic-json#>.
+//
 // `lpgwrite-example` adds some extra FDOM comprehensions:
 // - a member named `%title` contains human readable title for the item. If there is no `%title` member, the title is assumed to be the same
 // as the item's short name. It typically follows the item opening part in the pattern: <#~~`<#./%title: Your title#>`~~#> (note it is a mistake to omit `./` or `:`, it may need some training to unlearn doing this).
@@ -33,7 +35,31 @@ function calcPath(workDir, path) {
 // - first paragraph of the item's text content, provided it is not a list element or a non-inline code block, is considered a **brief information**. Together with the
 // rest part of the item's text content, it makes **full information**.
 //
-// This writer uses extra member `lpgwrite-example` in the generation item configuration (<#ref M/lp-config.json/members/lp-generate/items[]/writer/builtin-writers/lpgwrite-example#>):
+// Additionally, `lpgwrite-example` allows insertion of inline images via tag <#~~`<#img path-to-image-file#>`~~#>. The image will be emitted into the document as inline content independent on the source file
+// (via `data:` URL). This capability requires to specify `img` of type <#ref M/interfaces/lpcwrite-basic-json/config/extraTags/file#> in `extraTags` of <#ref M/interfaces/lpcwrite-basic-json#> that produces
+// input model for this generator:
+// ```
+// lp-compile: {
+// 	...
+// 	items: [
+// 		...
+// 		{
+// 			...
+// 			writer: "${LP_HOME}/lpcwrite-basic-json" $,
+// 			lpcwrite-basic-json: {
+// 				outFile: "lp-compile.gen/logipard-doc-fdom.json",
+// 				extraTags: {
+// 					"img": "file",
+// 					...
+// 				}
+// 			}
+// 		}
+// 	]
+// 	...
+// }
+// ```
+//
+// The `lpgwrite-example` writer uses extra member `lpgwrite-example` in the generation item configuration (<#ref M/lp-config.json/members/lp-generate/items[]/writer/builtin-writers/lpgwrite-example#>):
 // ```
 // {
 // 	...
@@ -150,6 +176,8 @@ module.exports = {
 							refText = decodeStringAtom(refItem, "%%title"); // decodeStringAtom here is forward-declaration
 						}
 						result.push(lpRefHtml(contentFrag.ref.uid, refText));
+					} else if (contentFrag.here) {
+						result.push("`" + contentFrag.here + "`");
 					} else if (contentFrag.srcFile) {
 						result.push(lpSrcHtml(contentFrag.srcFile));
 					} else if (contentFrag.customTag) {

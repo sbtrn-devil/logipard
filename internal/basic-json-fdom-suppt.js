@@ -133,6 +133,11 @@ module.exports = function BasicJsonFdom() {
 		node.content.push({ srcFile, ref: refNode, text });
 	}
 
+	function addHereTag(node, srcLocText, srcFile) {
+		markNodeRefd(node, srcFile);
+		node.content.push({ srcFile, here: srcLocText });
+	}
+
 	function addTag(node, tagNode, srcFile) {
 		markNodeRefd(node, srcFile);
 		var tagNodeSources = node.tags.get(tagNode);
@@ -196,7 +201,7 @@ module.exports = function BasicJsonFdom() {
 			members: Object.create(null),
 			membersInOrder: new Array(),
 			tags: new Map(), // tag => srcFiles
-			content: new Array() // { srcFile: ..., value: text | ref: obj }
+			content: new Array() // { srcFile: ..., value: text | ref: obj | here: str }
 		};
 		clearModel();
 
@@ -252,6 +257,8 @@ module.exports = function BasicJsonFdom() {
 				var srcName = srcIds.getSrcName(contentPiece.srcFile) || "unknown";
 				if (contentPiece.ref) {
 					addRef(node, getNodeByUid(contentPiece.ref), contentPiece.text, srcName);
+				} else if (contentPiece.here) {
+					addHereTag(node, contentPiece.here, srcName);
 				} else if (contentPiece.customTag) {
 					var customTag = { ...contentPiece.customTag };
 					// TODO: decode contentPiece.customTag.ref if available
@@ -350,6 +357,8 @@ module.exports = function BasicJsonFdom() {
 				if (contentPiece.ref) {
 					srcContentPiece.ref = contentPiece.ref.uid;
 					srcContentPiece.text = contentPiece.text;
+				} else if (contentPiece.here) {
+					srcContentPiece.here = contentPiece.here.trim();
 				} else if (contentPiece.customTag) {
 					// TODO: contentPiece.customTag.ref to contentPiece.customTag.ref.uid, if available
 					srcContentPiece.customTag = { ...contentPiece.customTag };
@@ -393,6 +402,7 @@ module.exports = function BasicJsonFdom() {
 		addContent,
 		addRef,
 		addTag,
+		addHereTag,
 		addCustomTag,
 		invalidateSourceFile,
 		loadFromFile,
@@ -416,6 +426,8 @@ module.exports = function BasicJsonFdom() {
 						targetContent.push(node.content[i].value);
 					} else if (node.content[i].ref) {
 						targetContent.push({ ref: node.content[i].ref, text: node.content[i].text });
+					} else if (node.content[i].here) {
+						targetContent.push({ here: node.content[i].here });
 					} else if (node.content[i].customTag) {
 						targetContent.push({ customTag: node.content[i].customTag });
 					}

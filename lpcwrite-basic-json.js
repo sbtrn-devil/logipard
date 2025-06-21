@@ -112,6 +112,12 @@ exports.appendRef = async function appendRef({ modelOutput, targetNodeName, refN
 	modelOutput.usedSourceFiles.add(sourceFile);
 };
 
+exports.appendHereTag = async function appendHereTag({ modelOutput, targetNodeName, srcLocText, sourceFile }) {
+	var targetNode = modelOutput.model.getNodeByName(targetNodeName);
+	modelOutput.model.addHereTag(targetNode, srcLocText, sourceFile);
+	modelOutput.usedSourceFiles.add(sourceFile);
+};
+
 exports.processCustomTag = async function processCustomTag({ modelOutput, targetNodeName, tagName, toolkit, sourceFile }) {
 	var targetNode = modelOutput.model.getNodeByName(targetNodeName);
 
@@ -126,6 +132,9 @@ exports.processCustomTag = async function processCustomTag({ modelOutput, target
 		switch (xtagType) {
 		//#LP ./file %property: <#./%title: content type = "file"#>
 		// An embedded file. The `customTag` object will be `{ name: "<tag-name>", file: "data:;base64,...file binary data as base64 data URL..." }`
+		//
+		// The tag is expected in format <#~~`<#tag-name path-to-file#>`~~#>, where absolute path to file (starting from '/') is relative to the project root directory,
+		// and non-absolute path is relative to directory containing the current source file (original one, not the one in `inRootDir` with extracted LP input).
 		case 'file':
 			var filePath = toolkit.text.trim();
 			if (filePath[0] == '/' || filePath[0] == '\\') {
@@ -144,6 +153,8 @@ exports.processCustomTag = async function processCustomTag({ modelOutput, target
 			break;
 		//#LP ./text %property: <#./%title: content type = "text"#>
 		// Text. The `customTag` object will be `{ name: "<tag-name>", text: "...the inside of the tag as plain text..." }`
+		//
+		// The tag is expected in format <#~~`<#tag-name ...everything here is taken as raw plain text...#>`~~#>.
 		case 'text':
 			modelOutput.model.addCustomTag(targetNode, { name: tagName, text: toolkit.text.trim() }, sourceFile);
 			break;
