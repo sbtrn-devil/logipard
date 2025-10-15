@@ -448,7 +448,8 @@ module.exports = function BasicJsonFdom() {
 
 				if (node.membersInOrder.size <= 0 && node.tags.size <= 0 && (!node.taggedTo || node.taggedTo.size <= 0) && node.content.length <= 0) {
 					node.isNull = true; // this will be needed by the reader
-					node.parent.membersInOrder.delete(node); // null-nodes are not included into in-order members set in order to exclude them from "has members"/"members that..." search
+					if (node.parent)
+						node.parent.membersInOrder.delete(node); // null-nodes are not included into in-order members set in order to exclude them from "has members"/"members that..." search
 				}
 			}
 

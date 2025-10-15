@@ -1027,7 +1027,7 @@ function BasicJsonFdomReader(rootItemNode, model) {
 					tags: emptySet,
 					taggedTo: emptySet,
 					content: emptyArray,
-					members: {},
+					membersById: { __proto__: null },
 					membersInOrder: emptySet
 				});
 			}
