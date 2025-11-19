@@ -1,6 +1,6 @@
 {
   "name": "logipard",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Toolkit for freeform documentation generation from inline comments",
   "main": "index.js",
   "bin": {

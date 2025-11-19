@@ -137,7 +137,7 @@ module.exports = {
 					} else {
 						// non-home location - just emit the header and the link
 						outPush("#".repeat(Math.min(level + 1, 6)) + " " + input.itemsByUid[modelLine.item].title + " " + 
-							mdLinkByUid(modelLine.item) + "#".repeat(Math.min(level + 1, 6)));
+							mdLinkByUid(modelLine.item) + " " + "#".repeat(Math.min(level + 1, 6)));
 					}
 					break;
 
