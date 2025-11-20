@@ -1,7 +1,7 @@
 # Project specific
 .gitignore
 *.gen/
-site/
+docs/
 
 # Logs
 logs
