@@ -274,7 +274,7 @@ The query starts with collection:
 - `node`
 
 Then query `inMembersThat (named /%^member/) query (hasMembersNamed /^%data$/)` delivers the following collection:
-- `node/memberB/%data`
+- `node/memberB`
 
 (The `node/other` has member `%data`, but does not pass the `inMembersThat` condition, so doesn't get into the collection of subjects for sub-query search.)
 
