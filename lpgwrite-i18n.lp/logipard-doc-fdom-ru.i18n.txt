@@ -4620,7 +4620,7 @@ FDOM включает понятие **запроса** - спецификаци
 \ "Para:Y9j59NYlyODthheEEdMPaZ4CpUlWKILW+q4Uba4TCkKVViboqnGpj/wEuQlzOow20EP9frucxg2w7R5Bv9hpSg=="
 
 / "Para:5Mi7meq80Ff1B/2E3ZqJDaN6dYr6oVpHZzs/i8bnb9/gGlDZyU7mLl9ujUm6e8Al3UzG4F6D0RnSmZti9/S2OQ=="
-- смешанные список узлов и спецификаций коллекций, например: `[node-fn-1, node-fn-2, <coll-spec-1>, node-fn-3...]` Расширенный вариант списка узлов. Элемненты спецификации коллекции воспринимаются как элементы списка,
+- смешанные список узлов и спецификаций коллекций, например: `[node-fn-1, node-fn-2, <coll-spec-1>, node-fn-3...]` Расширенный вариант списка узлов. Элементы спецификации коллекции воспринимаются как элементы списка,
 полученные распаковкой соответствующей коллекции; узлы-дубликаты игнорируются (узел включается в коллекцию не более одного раза).
 \ "Para:5Mi7meq80Ff1B/2E3ZqJDaN6dYr6oVpHZzs/i8bnb9/gGlDZyU7mLl9ujUm6e8Al3UzG4F6D0RnSmZti9/S2OQ=="
 
@@ -6354,13 +6354,13 @@ ${LP_HOME}/lpgwrite-example-docprg.lpson: встроенная программ�
 выглядит как продолжение контента основного элемента. Предполагаемое использование - через добавление контента и членов к `item/%extra` следующим образом:
 \ "Para:7XlvIKmjpf3IrMvG5NSBcXbjCiSMqcNfSdfqAQP/5HXbvuL8plXTQDrw8YXN470B44OPLjHZN6hjID6/V9x3Iw=="
 
-/ "Para:qkLNynKhilqheJ2k8nGmbh6NonErGG1CQFINDZzXHonN7czpXYpnLZ93kVHLclBOb7G4rv9qhmBjkgE1VQVGUg=="
+/ "Para:bN7EpT8DU5d1ZLWg7sswe1OyA5ohA8AcCl2rYtL+kpIw7YWZ9LAs92lX2ZCBKoJLn29FqlQAY/nkmXHuwdSbeQ=="
 ```
 #LP main-item {
 Контент основного элемента
 #LP ./%extra: непосредственный контент extra для основного элемента
 #LP ./%extra/A %member: член A в extra основного элемента (внутри элемента)
-Ещё контент основного элемента
+#LP .: Ещё контент основного элемента
 #LP ./ownMember %member: собственный член основного элемента
 #LP }
 #LP main-item/%extra/B %member {
@@ -6368,7 +6368,7 @@ ${LP_HOME}/lpgwrite-example-docprg.lpson: встроенная программ�
 #LP ./extra-B-member: дополнительный член элемента B
 #LP }
 ```
-\ "Para:qkLNynKhilqheJ2k8nGmbh6NonErGG1CQFINDZzXHonN7czpXYpnLZ93kVHLclBOb7G4rv9qhmBjkgE1VQVGUg=="
+\ "Para:bN7EpT8DU5d1ZLWg7sswe1OyA5ohA8AcCl2rYtL+kpIw7YWZ9LAs92lX2ZCBKoJLn29FqlQAY/nkmXHuwdSbeQ=="
 
 / "Para:mihKpHUH3gdGMj5XFqhF+7O2QDPX5fsoez2/A5zNMjnU/PrX3ETZgq0+ObL0fD+summ14tXOAXLHQkXWgo9ZeQ=="
 Данный пример приводит к следующей видимой структуре секции `main-item`:
@@ -6411,6 +6411,65 @@ ${LP_HOME}/lpgwrite-example-docprg.lpson: встроенная программ�
 которые лучше разместить перед списком членов). Чтобы обойти это неудобство, можно переместить список членов, аргументов и т. д. из самого элемента в члены его элемента `./%extra`. Они всё ещё
 будут выглядеть "встроенными" в общий текст, но логически уже будут частью отдельного элемента, и не будут участвовать в общем порядке показа частей основного элемента.
 \ "Para:GDy7E2RWz7g8IdxtdxorQcoDPuKIeeXTMhTKYvaADWjrCUFujJXVs6VD2a/rM8FPeGQ1bGYYJw4YiQUYE1JXhA=="
+
+## Item: /domain.logipard/lpgwrite-example-program/example-docprg/extra-comprehensions/link/%title
+# lpgwrite-example-program.lp-txt
+/ "Para:EZHmOcy8nRZyB4Obi3Ak7x3TkNTE1tc0XAEtlgE14kXSIxVNFKn83Rc+TS3+c3PfHWVpPlkYOyl2TKcGqYVY6g=="
+%link: добавить заданные элементы - не члены
+\ "Para:EZHmOcy8nRZyB4Obi3Ak7x3TkNTE1tc0XAEtlgE14kXSIxVNFKn83Rc+TS3+c3PfHWVpPlkYOyl2TKcGqYVY6g=="
+
+## Item: /domain.logipard/lpgwrite-example-program/example-docprg/extra-comprehensions/link
+# lpgwrite-example-program.lp-txt
+/ "Para:TQsvpTo0ObnM46knO9emR+fmp9Uk+V7htITDtM1In4DYYGEEYA0BBpvX7EMyn2Bx5KL4RXDnPndcy4GZpj94JQ=="
+Член `%link` позволяет задать список подэлементов для добавления к документу в секции данного элемента после его собственных элементов-членов, `%extra` и `%notes`. На место этих подэлементов в FDOM
+не накладывается ограничений, можно задавать любые. Места расположения этих элементов в данном месте выходного документа будут считаться второстепенными. Предполагаемое использование - следующим образом:
+\ "Para:TQsvpTo0ObnM46knO9emR+fmp9Uk+V7htITDtM1In4DYYGEEYA0BBpvX7EMyn2Bx5KL4RXDnPndcy4GZpj94JQ=="
+
+/ "Para:7fQAJGaRiTiIALDOf1MMix54SPoRsIQPh53jVlGcckbmxexC9ml1RLh6UFiQhTm4hY484oAxewCttqoaPguwHQ=="
+```
+Контент основного элемента
+#LP ./ownMember: собственный член main-item (не помечен как %member)
+#-LP обратите внимание, что элементы списка добавляются как теги к %link (перед ними нет двоеточия, разрешается добавлять #)
+<#./%link foreign-item-1 foreign-item-2#>
+#-LP в документе может быть более одной секции с добавлением связей
+<#./%link foreign-item-3: контент в %link-секциях игнорируется, имеют значение только теги#>
+#LP }
+#LP foreign-item-1 {
+Внешний элемент 1
+...
+#LP }
+#LP foreign-item-2 {
+Внешний элемент 2
+...
+#LP }
+#LP foreign-item-3 {
+Внешний элемент 3
+...
+#LP }
+```
+\ "Para:7fQAJGaRiTiIALDOf1MMix54SPoRsIQPh53jVlGcckbmxexC9ml1RLh6UFiQhTm4hY484oAxewCttqoaPguwHQ=="
+
+/ "Para:ibR+VP0t8JfyAAGRqyYqsM0/Pcg6w6G1qCxvq3iwGXD8g7kQVrv/CAthS24fL/xR+4PWpr+IankMwE3k07duCA=="
+```
+Контент основного элемента
+// ...далее идёт полная информация main-item (у нас тут её нет)...
+ ownMember | main-item's own member
+// ...далее идут другие члены, дополнительные примечения и дополнительный контент (у нас тут их нет)...
+// ...и, наконец, идут привязанные элементы
+ foreign-item-1 | Внешний элемент 1
+ ...
+ foreign-item-2 | Внешний элемент 2
+ ...
+ foreign-item-3 | Внешний элемент 3
+ ...
+```
+\ "Para:ibR+VP0t8JfyAAGRqyYqsM0/Pcg6w6G1qCxvq3iwGXD8g7kQVrv/CAthS24fL/xR+4PWpr+IankMwE3k07duCA=="
+
+/ "Para:gV7ocbQca1ZuG54krFPeTQRfqHTRC2aDZ6aDoZf2sm54VInD1NxuKTRWFUi78qyG0pHpSuTSWVhHHyC+tCtAlQ=="
+Возможность `%link` полезна, если нужно, чтобы визуальная структура некоторой части целевого документа отличалась от реальной структуры родитель-членства в FDOM.
+Можно сгруппировать элементы, которые в норме разбросаны по разным местам модели, в одно место, возможно даже используя один элемент в нескольких местах (но помните, что элементы будут изначально
+свёрнутыми во всех месторасположениях, кроме основного).
+\ "Para:gV7ocbQca1ZuG54krFPeTQRfqHTRC2aDZ6aDoZf2sm54VInD1NxuKTRWFUi78qyG0pHpSuTSWVhHHyC+tCtAlQ=="
 
 ## Item: /domain.logipard/lpgwrite-example-program/example-docprg/parameters/%title
 # lpgwrite-example-program.lp-txt
@@ -6737,7 +6796,7 @@ true, если элемент удовлетворяет условию, false, 
 ## Item: /domain.logipard/lpgread-interface/Context/item
 # lpgread-interface.lp-txt
 / "Para:DLYCLJQhptQf8Byfi99MXMYfi+/vGFbpuIkKs4ej8BZni8GHoyHndhVq0GEosvDXEXN0Y9SAXsPmsJ0YybR6PQ=="
-Вернуть элемент по заданному имени-пути, полному или относительно заданного базового элемнета. Первый краткоимённый сегмент полного имени может быть алиасом имени, определённым в данном <lp-ref item="/domain.logipard/lpgread-interface/Context"></lp-ref>.
+Вернуть элемент по заданному имени-пути, полному или относительно заданного базового элемента. Первый краткоимённый сегмент полного имени может быть алиасом имени, определённым в данном <lp-ref item="/domain.logipard/lpgread-interface/Context"></lp-ref>.
 \ "Para:DLYCLJQhptQf8Byfi99MXMYfi+/vGFbpuIkKs4ej8BZni8GHoyHndhVq0GEosvDXEXN0Y9SAXsPmsJ0YybR6PQ=="
 
 ## Item: /domain.logipard/lpgread-interface/Context/item/baseItem

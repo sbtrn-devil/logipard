@@ -575,7 +575,7 @@ continuation to the item's own content. The intended usage is to add content and
 Main item content
 #LP ./%extra: main-item's direct extra content
 #LP ./%extra/A %member: main-item's extra member A (in-item)
-More main item content
+#LP .: More main item content
 #LP ./ownMember %member: main-item's own member
 #LP }
 
@@ -620,6 +620,58 @@ presenting the item's general look, which should better go before the members li
 to members of its `./%extra` item. While they will still look "inline", they are logically part of a different item and will not be parts of the main item's brief display flow.
 
 #LP } <-#extra#>
+
+#LP extra-comprehensions/link { <#./%title: %link: append specified non-member items#>
+The `%link` member allows you to specify list of sub-items to add to the document under this item after its own member items, `%extra` and `%notes`. FDOM location of these sub-items is not restricted,
+you can include any. Locations of these items here in the output document will be treated as secondary. The intended usage is like this:
+#LP~n~
+```
+#LP main-item {
+Main item content
+#LP ./ownMember: main-item's own member (not %member-marked)
+#-LP note that listed items are added tags to the %link (no colon before list of items, # is allowed)
+<#./%link foreign-item-1 foreign-item-2#>
+#-LP there can be more than one addition to the link across the document
+<#./%link foreign-item-3: content in %link sections is ignored, only tags are important#>
+#LP }
+
+#LP foreign-item-1 {
+Foreign item 1
+...
+#LP }
+
+#LP foreign-item-2 {
+Foreign item 2
+...
+#LP }
+
+#LP foreign-item-3 {
+Foreign item 3
+...
+#LP }
+```
+#LP~n~
+
+This example would result in the following visible structure of the `main-item`'s section:
+```
+Main item content
+// ...then follows main-item's full info (none here)...
+ ownMember | main-item's own member
+// ...then follow other members, notes and extras (none here)...
+// ...and finally follow the linked items
+ foreign-item-1 | Foreign item 1
+ ...
+ foreign-item-2 | Foreign item 2
+ ...
+ foreign-item-3 | Foreign item 3
+ ...
+```
+
+The `%link` feature is useful if you need visual structure of some part in the target document that differs from actual FDOM parent-membership structure.
+You can group items normally scattered across the model into a single location, possibly even featuring one item in several locations (but remember that items will start folded on all locations
+except for the primary one).
+
+#LP } <-#link#>
 
 #LP } <-#extra-comprehensions#>
 
